@@ -1,0 +1,20 @@
+﻿# data (keep repo lean & safe)
+*.parquet
+*.xlsx
+*.xls
+*.zip
+data-raw/
+**/temp/
+**/tmp/
+
+# notebooks & tooling
+.ipynb_checkpoints/
+.env
+.venv/
+__pycache__/
+*.log
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
