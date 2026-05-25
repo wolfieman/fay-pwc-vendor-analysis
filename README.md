@@ -2,6 +2,7 @@
 
 **A reproducible data pipeline and analysis that turned a fragmented vendor list for a municipal utility into an audited, decision-ready dataset — surfacing a 65% data-quality gap and a concrete supplier-outreach recommendation.**
 
+[![CI](https://github.com/wolfieman/fay-pwc-vendor-analysis/actions/workflows/ci.yml/badge.svg)](https://github.com/wolfieman/fay-pwc-vendor-analysis/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![uv](https://img.shields.io/badge/env-uv-261230?logo=astral&logoColor=white)
 ![pandas](https://img.shields.io/badge/pandas-3.0-150458?logo=pandas&logoColor=white)
