@@ -1,0 +1,21 @@
+[project]
+name = "pwc-vendor-analysis"
+version = "0.1.0"
+description = "Vendor availability & licensing data-quality analysis for the Fayetteville Public Works Commission (PWC)."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+authors = [{ name = "Wolfgang Sanyer", email = "wolfgang.sanyer@gmail.com" }]
+dependencies = [
+    "pandas>=3.0",
+    "openpyxl>=3.1",
+    "tqdm>=4.65",
+    "selenium>=4.40",
+    "playwright>=1.50",
+    "webdriver-manager>=4.0",
+]
+
+# This repo is an analysis project, not an installable library:
+# uv manages dependencies but does not build/install the project itself.
+[tool.uv]
+package = false

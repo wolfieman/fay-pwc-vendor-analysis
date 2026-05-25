@@ -7,6 +7,19 @@ data-raw/
 **/temp/
 **/tmp/
 
+# project data — never commit real records (PII) or pipeline outputs
+data/raw/*
+data/processed/*
+# (the anonymized, PII-removed dataset is published under data/sample/ instead)
+
+# assets/*.mp4 is tracked via Git LFS (see .gitattributes) — intentionally NOT ignored
+
+# raw report scrapes (contain original names/identifiers; curated copies live in reports/)
+reports/_source/
+
+# Word originals kept locally for reference; canonical docs are the .md files
+docs/*.docx
+
 # notebooks & tooling
 .ipynb_checkpoints/
 .env
