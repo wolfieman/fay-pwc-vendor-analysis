@@ -3,6 +3,9 @@ nclbgc_license_details_acquisition.py — Scrape contractor license details from
 NC Licensing Board for General Contractors (NCLBGC) portal for a list of license
 numbers (Selenium + webdriver-manager). AJAX-safe; splits multiple qualifiers into
 separate columns. Outputs an Excel file.
+
+Copyright © 2026 Wolfgang Sanyer
+Licensed under the Polyform Noncommercial License 1.0.0 (see LICENSE).
 """
 
 import argparse

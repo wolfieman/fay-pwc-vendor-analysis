@@ -3,6 +3,9 @@
 make_audit.py — Summarize data quality from a profile-summary CSV (produced by
 profile_data.py): average % missing per file and the top-N most-missing columns.
 Writes a Markdown audit report. Run profile_data.py first.
+
+Copyright © 2026 Wolfgang Sanyer
+Licensed under the Polyform Noncommercial License 1.0.0 (see LICENSE).
 """
 import argparse
 from pathlib import Path

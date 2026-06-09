@@ -3,6 +3,9 @@
 clean_data.py — Standardize a single dataset: snake_case headers, trim strings,
 normalize common Y/N booleans, and add is_missing / is_zero flags for numeric columns.
 No imputation. Writes a cleaned CSV plus a QA missingness summary to --outdir.
+
+Copyright © 2026 Wolfgang Sanyer
+Licensed under the Polyform Noncommercial License 1.0.0 (see LICENSE).
 """
 import argparse
 import re

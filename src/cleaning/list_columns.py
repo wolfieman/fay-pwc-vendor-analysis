@@ -10,6 +10,9 @@ Usage:
   python src/cleaning/list_columns.py some.xlsx --sheet 0 --save
   python src/cleaning/list_columns.py some.xlsx --list-sheets
   python src/cleaning/list_columns.py --datadir other/dir file.csv
+
+Copyright © 2026 Wolfgang Sanyer
+Licensed under the Polyform Noncommercial License 1.0.0 (see LICENSE).
 """
 
 import argparse

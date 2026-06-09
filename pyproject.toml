@@ -19,3 +19,22 @@ dependencies = [
 # uv manages dependencies but does not build/install the project itself.
 [tool.uv]
 package = false
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+exclude = [".venv"]
+
+[tool.ruff.lint]
+# Replicate ruff's default select (E4, E7, E9, F) so this config introduces no new
+# diagnostics on these scripts, plus CPY (flake8-copyright) to enforce the required
+# authorship/license banner. The broader "E" (E501 line-length, E2 whitespace), W,
+# and I (isort) are intentionally NOT added: these scripts have long lines and
+# unsorted imports that those selects would flag, which is out of scope here.
+# CPY001 is a preview rule, so lint.preview is enabled (scoped to lint only).
+preview = true
+select = ["E4", "E7", "E9", "F", "CPY"]
+
+[tool.ruff.lint.flake8-copyright]
+# Match our exact banner copyright line (literal TOML string: no backslash escaping).
+notice-rgx = '(?i)Copyright\s+©\s+\d{4}\s+Wolfgang Sanyer'

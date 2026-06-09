@@ -3,6 +3,9 @@
 merge_vendors.py — Merge multiple vendor lists (HUB, master, PWC) into a single
 source-of-truth keyed on a canonicalized vendor name, with per-source presence flags.
 Writes a GitHub-safe sample + QA counts to --outdir (full SSOT optional via --full-xlsx).
+
+Copyright © 2026 Wolfgang Sanyer
+Licensed under the Polyform Noncommercial License 1.0.0 (see LICENSE).
 """
 import argparse
 import re

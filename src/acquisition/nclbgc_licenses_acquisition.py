@@ -3,6 +3,9 @@
 nclbgc_licenses_acquisition.py — Look up NCLBGC license account numbers by company
 name (Playwright) and fill them into a spreadsheet column. Writes 'L.xxxxx', 'PENDING',
 or 'NA' per row. Supports normalized-name retries and parallel page reuse.
+
+Copyright © 2026 Wolfgang Sanyer
+Licensed under the Polyform Noncommercial License 1.0.0 (see LICENSE).
 """
 import pandas.api.types as ptypes
 import argparse

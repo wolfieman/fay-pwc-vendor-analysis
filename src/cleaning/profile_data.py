@@ -2,6 +2,9 @@
 """
 Profile datasets (no mutation): counts, missingness, zeros, basic stats.
 Writes per-file summaries + a combined summary CSV and simple metadata JSON.
+
+Copyright © 2026 Wolfgang Sanyer
+Licensed under the Polyform Noncommercial License 1.0.0 (see LICENSE).
 """
 
 import argparse
