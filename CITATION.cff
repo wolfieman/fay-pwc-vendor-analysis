@@ -1,0 +1,33 @@
+cff-version: 1.2.0
+message: "If you reference this work, please cite as below."
+title: "Vendor Availability & Licensing Data-Quality Protocol: A Reproducible Audit of Fayetteville PWC's Vendor Base"
+abstract: >
+  A reproducible data pipeline and descriptive analysis that consolidates a
+  fragmented municipal-utility vendor list into an audited, decision-ready
+  dataset. Assembles 295 vendor records from two public sources (Fayetteville
+  Public Works Commission and the North Carolina Licensing Board for General
+  Contractors), applies a documented cleaning-and-audit protocol with PII
+  stripping and controlled vocabularies, and surfaces a 65.4% gap in HUB
+  (Historically Underutilized Business) status together with a concrete
+  supplier-outreach recommendation. Ships an anonymized, PII-stripped sample as
+  the public reproduction path.
+type: software
+authors:
+  - family-names: Sanyer
+    given-names: Wolfgang
+    affiliation: "Fayetteville State University, Broadwell College of Business and Economics"
+version: "0.1.0"
+date-released: "2026-05-25"
+license: Polyform-Noncommercial-1.0.0
+url: "https://github.com/wolfieman/fay-pwc-vendor-analysis"
+repository-code: "https://github.com/wolfieman/fay-pwc-vendor-analysis"
+keywords:
+  - data-quality
+  - vendor-analysis
+  - municipal-utility
+  - hub-certification
+  - supplier-diversity
+  - data-cleaning
+  - reproducible-pipeline
+  - pandas
+  - python

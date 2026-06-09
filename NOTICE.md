@@ -1,0 +1,64 @@
+# Required Notice
+
+**Copyright © 2026 Wolfgang Sanyer**
+Licensed under the Polyform Noncommercial License 1.0.0
+https://polyformproject.org/licenses/noncommercial/1.0.0
+
+---
+
+## Project Information
+
+**Project:** Vendor Availability & Licensing Data-Quality Protocol — a reproducible data
+pipeline and analysis of the Fayetteville Public Works Commission (PWC) vendor base.<br>
+**Author / Owner:** Wolfgang Sanyer (personal portfolio project).
+
+---
+
+## Data Attribution
+
+This project uses two publicly available source datasets (295 records each). The raw files
+contain contact PII and are **not committed**; an anonymized, PII-stripped sample ships
+under [`data/sample/`](data/sample/) as the public reproduction path (schema in
+[`data/DATA_DICTIONARY.md`](data/DATA_DICTIONARY.md)).
+
+1. **Fayetteville PWC vendor list**
+   - Source: Fayetteville Public Works Commission (eVP, `evp.nc.gov`)
+   - License: public data
+2. **Contractor license details**
+   - Source: North Carolina Licensing Board for General Contractors (NCLBGC, `nclbgc.org`)
+   - License: public data
+
+The five PII columns (`Contact_Name`, `Contact_Email`, `Contact_Phone`, `Phone`,
+`Qualifier_Name`) are removed from any published extract.
+
+---
+
+## Original Work
+
+The data-cleaning-and-audit pipeline, the data-quality protocol, the analysis, and all
+written materials are original work by the author, except where explicitly cited or
+attributed to an external source.
+
+---
+
+## License Summary
+
+This software is licensed for **non-commercial use only**. See [LICENSE](LICENSE) for the
+full Polyform Noncommercial License 1.0.0 text and the Required Notice that must travel
+with every copy.
+
+### You MAY:
+
+✅ Study the code and methodology<br>
+✅ Use it for educational purposes<br>
+✅ Share it with attribution<br>
+✅ Modify it for personal learning
+
+### You MAY NOT:
+
+❌ Use it for commercial purposes<br>
+❌ Sell the code or derivatives<br>
+❌ Incorporate it into commercial products<br>
+❌ Relicense under different terms
+
+For commercial licensing inquiries, please contact the author.
