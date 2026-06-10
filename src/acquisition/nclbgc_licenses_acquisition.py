@@ -326,7 +326,7 @@ def main():
     ap.add_argument(
         "--reuse",
         action="store_true",
-        help="Reuse the same search page for all rows (no full reload). ~40% faster",
+        help="Reuse the same search page for all rows (no full reload). ~40%% faster",
     )
     args = ap.parse_args()
 
@@ -347,12 +347,12 @@ def main():
     )
     name_idx, lic_idx = get_col_indices(df, args.name_col, args.license_col)
 
-    # Ensure the license column can hold text but skip slow conversions
-    # if already string
+    # Ensure the license column can hold text but skip slow conversions if
+    # already string. Assign by label (not positional iloc) so pandas 3.0 permits
+    # the dtype change from numeric/empty to string.
     if not ptypes.is_string_dtype(df.iloc[:, lic_idx]):
-        df.iloc[:, lic_idx] = df.iloc[:, lic_idx].astype(  # type: ignore
-            "string"
-        )  # type: ignore
+        lic_label = df.columns[lic_idx]
+        df[lic_label] = df.iloc[:, lic_idx].astype("string")
 
     out_path = Path(args.out) if args.out else in_path.with_suffix(".filled.xlsx")
 
