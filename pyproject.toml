@@ -55,6 +55,7 @@ notice-rgx = '(?i)Copyright\s+©\s+\d{4}\s+Wolfgang Sanyer'
 dev = [
     "pytest>=9.0.3",
     "pytest-cov>=7.1.0",
+    "ruff>=0.15.16",
 ]
 
 [tool.pytest.ini_options]

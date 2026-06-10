@@ -6,7 +6,7 @@ permissions:
   contents: read
 
 jobs:
-  lint-and-compile:
+  lint-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -16,7 +16,11 @@ jobs:
           python-version: "3.14"
       - name: Sync dependencies
         run: uv sync
-      - name: Lint (ruff)
-        run: uvx ruff check src
+      - name: Lint (ruff check)
+        run: uv run ruff check src tests
+      - name: Format check (ruff format)
+        run: uv run ruff format --check src tests
+      - name: Tests (pytest)
+        run: uv run pytest
       - name: Byte-compile sources
         run: uv run python -m compileall src
