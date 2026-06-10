@@ -14,7 +14,11 @@ from vendorscope.profiling import normalize, profile_dataframe
 @pytest.mark.unit
 def test_normalize_headers_booleans_and_flags():
     df = pd.DataFrame(
-        {"HUB Status": ["Y", "N", "Y"], "Count": [0, 5, 3], " Name ": [" a ", " b ", " c "]}
+        {
+            "HUB Status": ["Y", "N", "Y"],
+            "Count": [0, 5, 3],
+            " Name ": [" a ", " b ", " c "],
+        }
     )
     out = normalize(df)
 

@@ -35,16 +35,26 @@ def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="NCLBGC license details scraper")
     p.add_argument("--input", required=True, help="Input Excel file")
     p.add_argument("--sheet", default=None, help="Sheet name (optional)")
-    p.add_argument("--license-col", default=None,
-                   help="Column name with license numbers (auto-detects if omitted)")
-    p.add_argument("--out", default="data/raw/nclbgc-license-details.xlsx",
-                   help="Output Excel file")
-    p.add_argument("--limit", type=int, default=None,
-                   help="Limit number of licenses to process (for quick tests)")
-    p.add_argument("--headless", action="store_true",
-                   help="Run Chrome headless")
-    p.add_argument("--pause", type=float, default=0.25,
-                   help="Short sleep between actions (sec)")
+    p.add_argument(
+        "--license-col",
+        default=None,
+        help="Column name with license numbers (auto-detects if omitted)",
+    )
+    p.add_argument(
+        "--out",
+        default="data/raw/nclbgc-license-details.xlsx",
+        help="Output Excel file",
+    )
+    p.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Limit number of licenses to process (for quick tests)",
+    )
+    p.add_argument("--headless", action="store_true", help="Run Chrome headless")
+    p.add_argument(
+        "--pause", type=float, default=0.25, help="Short sleep between actions (sec)"
+    )
     return p.parse_args()
 
 
@@ -87,7 +97,11 @@ class NCLBGCDetailsScraper:
     # ------------------------ debug helpers -------------------------
     def _dump_debug(self, tag: str) -> None:
         try:
-            name = f"debug_detail_missing_{ts_utc()}" if tag == "detail_missing" else f"debug_{tag}_{ts_utc()}"
+            name = (
+                f"debug_detail_missing_{ts_utc()}"
+                if tag == "detail_missing"
+                else f"debug_{tag}_{ts_utc()}"
+            )
             with open(f"{name}.html", "w", encoding="utf-8") as f:
                 f.write(self.driver.page_source)
             try:
@@ -118,10 +132,11 @@ class NCLBGCDetailsScraper:
             (By.ID, "AccountNumber"),
             (By.ID, "LicenseNumber"),
             (By.XPATH, "//input[@name='AccountNumber']"),
-            (By.XPATH,
-             "//input[contains(@placeholder,'License') or contains(@aria-label,'License')]"),
-            (By.XPATH,
-             "//label[contains(.,'License Number')]/following::input[1]"),
+            (
+                By.XPATH,
+                "//input[contains(@placeholder,'License') or contains(@aria-label,'License')]",
+            ),
+            (By.XPATH, "//label[contains(.,'License Number')]/following::input[1]"),
         ]
         for by, sel in selectors:
             try:
@@ -157,8 +172,10 @@ class NCLBGCDetailsScraper:
         try:
             self.wait.until(
                 EC.presence_of_element_located(
-                    (By.XPATH,
-                     "//table[@id='AccountSearchTable']//a[contains(@onclick,'ShowAccountDetails')]")
+                    (
+                        By.XPATH,
+                        "//table[@id='AccountSearchTable']//a[contains(@onclick,'ShowAccountDetails')]",
+                    )
                 )
             )
         except TimeoutException:
@@ -175,8 +192,7 @@ class NCLBGCDetailsScraper:
         ]
         for xp in xpaths:
             try:
-                link = self.wait.until(
-                    EC.element_to_be_clickable((By.XPATH, xp)))
+                link = self.wait.until(EC.element_to_be_clickable((By.XPATH, xp)))
                 link.click()
                 clicked = True
                 break
@@ -190,16 +206,16 @@ class NCLBGCDetailsScraper:
 
         # Wait for the inline dialog to be visible and populated via AJAX
         try:
-            self.wait.until(EC.visibility_of_element_located(
-                (By.ID, "dialog-form")))
+            self.wait.until(EC.visibility_of_element_located((By.ID, "dialog-form")))
             self.wait.until(
                 EC.presence_of_element_located(
-                    (By.XPATH,
-                     "//*[@id='dialog-details']//*[contains(@class,'display-label')]")
+                    (
+                        By.XPATH,
+                        "//*[@id='dialog-details']//*[contains(@class,'display-label')]",
+                    )
                 )
             )
-            self._detail_context = self.driver.find_element(
-                By.ID, "dialog-form")
+            self._detail_context = self.driver.find_element(By.ID, "dialog-form")
             return True
         except TimeoutException:
             print("Detail view did not show expected elements")
@@ -272,12 +288,9 @@ class NCLBGCDetailsScraper:
             for r in rows:
                 tds = r.find_elements(By.XPATH, ".//td")
                 # Expected order: Name | Qualifier # | Status (defensive indexing)
-                name = (tds[0].text if len(tds) >
-                        0 else "").strip().replace("\n", " ")
-                qnum = (tds[1].text if len(tds) >
-                        1 else "").strip().replace("\n", " ")
-                stat = (tds[2].text if len(tds) >
-                        2 else "").strip().replace("\n", " ")
+                name = (tds[0].text if len(tds) > 0 else "").strip().replace("\n", " ")
+                qnum = (tds[1].text if len(tds) > 1 else "").strip().replace("\n", " ")
+                stat = (tds[2].text if len(tds) > 2 else "").strip().replace("\n", " ")
                 if name or qnum or stat:
                     q_names.append(name)
                     q_nums.append(qnum)
@@ -302,20 +315,18 @@ class NCLBGCDetailsScraper:
             details["Phone"] = self._get_field_by_label("Phone")
 
             # License
-            details["License_Display"] = (
-                self._get_field_by_label(
-                    "License #") or self._get_field_by_label("License Number")
-            )
+            details["License_Display"] = self._get_field_by_label(
+                "License #"
+            ) or self._get_field_by_label("License Number")
             details["Account_Type"] = self._get_field_by_label("Account Type")
-            details["Issue_Date"] = (
-                self._get_field_by_label(
-                    "First Issued Date") or self._get_field_by_label("Issued Date")
-            )
-            details["Expiration_Date"] = self._get_field_by_label(
-                "Expiration Date")
+            details["Issue_Date"] = self._get_field_by_label(
+                "First Issued Date"
+            ) or self._get_field_by_label("Issued Date")
+            details["Expiration_Date"] = self._get_field_by_label("Expiration Date")
             details["Status"] = self._get_field_by_label("Status")
             details["License_Limitation"] = self._get_field_by_label(
-                "License Limitation")
+                "License Limitation"
+            )
 
             # Active Classifications
             classes_text = ""
@@ -362,15 +373,26 @@ class NCLBGCDetailsScraper:
 
 
 # ------------------------------ main flow ------------------------------------
-def run_scrape(input_file: str, sheet: Optional[str], license_col: Optional[str],
-               out_file: str, limit: Optional[int], headless: bool, pause: float) -> None:
+def run_scrape(
+    input_file: str,
+    sheet: Optional[str],
+    license_col: Optional[str],
+    out_file: str,
+    limit: Optional[int],
+    headless: bool,
+    pause: float,
+) -> None:
     print(f"Loading {input_file}")
-    df = pd.read_excel(
-        input_file, sheet_name=sheet) if sheet else pd.read_excel(input_file)
+    df = (
+        pd.read_excel(input_file, sheet_name=sheet)
+        if sheet
+        else pd.read_excel(input_file)
+    )
     col = license_col or autodetect_license_column(df)
     if not col:
         raise RuntimeError(
-            "Could not find a license number column. Use --license-col to specify it.")
+            "Could not find a license number column. Use --license-col to specify it."
+        )
 
     lic_list: List[str] = []
     for v in df[col].tolist():
@@ -391,7 +413,8 @@ def run_scrape(input_file: str, sheet: Optional[str], license_col: Optional[str]
             print(f"Searching for license {lic}")
             if not scraper.search_license(lic):
                 results.append(
-                    {"License_Number": lic, "Error": "Search or click failed"})
+                    {"License_Number": lic, "Error": "Search or click failed"}
+                )
                 continue
 
             details = scraper.extract_license_details()
@@ -406,13 +429,24 @@ def run_scrape(input_file: str, sheet: Optional[str], license_col: Optional[str]
 
     # Desired column order (L: Qualifier_Number, M: Qualifier_Name, N: Qualifier_Status)
     ordered = [
-        "License_Number", "Company_Name", "Full_Address", "Phone",
-        "License_Display", "Account_Type", "Issue_Date", "Expiration_Date",
-        "Status", "License_Limitation", "Classifications",
-        "Qualifier_Number", "Qualifier_Name", "Qualifier_Status",
+        "License_Number",
+        "Company_Name",
+        "Full_Address",
+        "Phone",
+        "License_Display",
+        "Account_Type",
+        "Issue_Date",
+        "Expiration_Date",
+        "Status",
+        "License_Limitation",
+        "Classifications",
+        "Qualifier_Number",
+        "Qualifier_Name",
+        "Qualifier_Status",
     ]
-    cols = [c for c in ordered if c in out.columns] + \
-        [c for c in out.columns if c not in ordered]
+    cols = [c for c in ordered if c in out.columns] + [
+        c for c in out.columns if c not in ordered
+    ]
     out = out[cols]
 
     out.to_excel(out_file, index=False)
@@ -422,8 +456,15 @@ def run_scrape(input_file: str, sheet: Optional[str], license_col: Optional[str]
 
 def main():
     args = parse_args()
-    run_scrape(args.input, args.sheet, args.license_col, args.out,
-               args.limit, args.headless, args.pause)
+    run_scrape(
+        args.input,
+        args.sheet,
+        args.license_col,
+        args.out,
+        args.limit,
+        args.headless,
+        args.pause,
+    )
 
 
 if __name__ == "__main__":

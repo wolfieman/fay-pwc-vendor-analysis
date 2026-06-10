@@ -31,19 +31,30 @@ def eprint(*args, **kwargs):
 
 
 def parse_args():
-    p = argparse.ArgumentParser(
-        description="List dataset columns (Excel/CSV).")
-    p.add_argument("filename", nargs="?", default=DEFAULT_FILE,
-                   help=f"Filename inside --datadir (default: {DEFAULT_FILE})")
-    p.add_argument("--datadir", default=DEFAULT_DATA_DIR,
-                   help=f"Directory containing the file (default: {DEFAULT_DATA_DIR})")
-    p.add_argument("--outdir", default=DEFAULT_OUT_DIR,
-                   help=f"Where --save writes the column list (default: {DEFAULT_OUT_DIR})")
+    p = argparse.ArgumentParser(description="List dataset columns (Excel/CSV).")
+    p.add_argument(
+        "filename",
+        nargs="?",
+        default=DEFAULT_FILE,
+        help=f"Filename inside --datadir (default: {DEFAULT_FILE})",
+    )
+    p.add_argument(
+        "--datadir",
+        default=DEFAULT_DATA_DIR,
+        help=f"Directory containing the file (default: {DEFAULT_DATA_DIR})",
+    )
+    p.add_argument(
+        "--outdir",
+        default=DEFAULT_OUT_DIR,
+        help=f"Where --save writes the column list (default: {DEFAULT_OUT_DIR})",
+    )
     p.add_argument("--sheet", help="Excel sheet name or index (0-based)")
-    p.add_argument("--list-sheets", action="store_true",
-                   help="List Excel sheets and exit")
-    p.add_argument("--save", action="store_true",
-                   help="Save the column list to --outdir")
+    p.add_argument(
+        "--list-sheets", action="store_true", help="List Excel sheets and exit"
+    )
+    p.add_argument(
+        "--save", action="store_true", help="Save the column list to --outdir"
+    )
     return p.parse_args()
 
 
@@ -97,8 +108,11 @@ def main():
         eprint(f"❌ Error reading columns: {ex}")
         sys.exit(3)
 
-    print(f"✅ Columns in {path.name}" +
-          (f" (sheet={args.sheet})" if args.sheet else "") + ":")
+    print(
+        f"✅ Columns in {path.name}"
+        + (f" (sheet={args.sheet})" if args.sheet else "")
+        + ":"
+    )
     for i, c in enumerate(cols, 1):
         print(f"{i:02d}. {c}")
 

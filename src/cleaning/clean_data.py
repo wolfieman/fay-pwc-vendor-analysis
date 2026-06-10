@@ -7,6 +7,7 @@ No imputation. Writes a cleaned CSV plus a QA missingness summary to --outdir.
 Copyright © 2026 Wolfgang Sanyer
 Licensed under the Polyform Noncommercial License 1.0.0 (see LICENSE).
 """
+
 import argparse
 from pathlib import Path
 
@@ -21,11 +22,12 @@ def read_any(p: Path) -> pd.DataFrame:
 
 def main():
     ap = argparse.ArgumentParser(
-        description="Standardize columns & flags (no imputation).")
-    ap.add_argument("--input", required=True,
-                    help="Path to a single source file (csv/xlsx).")
+        description="Standardize columns & flags (no imputation)."
+    )
     ap.add_argument(
-        "--outdir", default="data/processed", help="Output directory.")
+        "--input", required=True, help="Path to a single source file (csv/xlsx)."
+    )
+    ap.add_argument("--outdir", default="data/processed", help="Output directory.")
     args = ap.parse_args()
 
     src = Path(args.input)
@@ -35,10 +37,7 @@ def main():
     df = normalize(df)
 
     # quick QA summary
-    qa = pd.DataFrame({
-        "column": df.columns,
-        "n_missing": df.isna().sum().values
-    })
+    qa = pd.DataFrame({"column": df.columns, "n_missing": df.isna().sum().values})
     qa.to_csv(outdir / f"{src.stem}-qa-summary.csv", index=False)
 
     # write sanitized copy

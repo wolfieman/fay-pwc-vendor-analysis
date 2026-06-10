@@ -7,6 +7,7 @@ or 'NA' per row. Supports normalized-name retries and parallel page reuse.
 Copyright © 2026 Wolfgang Sanyer
 Licensed under the Polyform Noncommercial License 1.0.0 (see LICENSE).
 """
+
 import pandas.api.types as ptypes
 import argparse
 import re
@@ -35,10 +36,12 @@ def save_xlsx(df: pd.DataFrame, out_path: Path):
         print(f"✅ Done. Wrote: {out_path}")
     except PermissionError:
         alt = out_path.with_name(
-            out_path.stem + f".{datetime.now():%Y%m%d-%H%M%S}.xlsx")
+            out_path.stem + f".{datetime.now():%Y%m%d-%H%M%S}.xlsx"
+        )
         with pd.ExcelWriter(alt, engine="openpyxl", mode="w") as xw:
             df.to_excel(xw, index=False)
         print(f"⚠️ File in use: {out_path}\n   ➜ Wrote instead: {alt}")
+
 
 # ---------- Playwright helpers ----------
 
@@ -48,8 +51,9 @@ def goto_search(page):
     page.goto(SEARCH_URL, wait_until="domcontentloaded")
     # Try to close cookie banner if present
     try:
-        page.get_by_role("button", name=re.compile(
-            "accept|agree|ok", re.I)).click(timeout=3000)
+        page.get_by_role("button", name=re.compile("accept|agree|ok", re.I)).click(
+            timeout=3000
+        )
     except Exception:
         pass
 
@@ -120,11 +124,16 @@ def classify_accounts(page, company_name: str) -> Tuple[Optional[str], bool]:
     if owner_idx >= 0 and q:
         for i in range(n):
             try:
-                cell_txt = rows.nth(i).locator(
-                    f"td:nth-child({owner_idx+1})").inner_text().lower()
+                cell_txt = (
+                    rows.nth(i)
+                    .locator(f"td:nth-child({owner_idx + 1})")
+                    .inner_text()
+                    .lower()
+                )
                 if q in cell_txt:
-                    candidate_indexes = [
-                        i] + [idx for idx in candidate_indexes if idx != i]
+                    candidate_indexes = [i] + [
+                        idx for idx in candidate_indexes if idx != i
+                    ]
                     break
             except Exception:
                 pass
@@ -144,7 +153,9 @@ def classify_accounts(page, company_name: str) -> Tuple[Optional[str], bool]:
     return non_pending, pending_present
 
 
-def fill_for_name(page, name: str, delay_after=0.7, try_normalized=False, reuse=False) -> str:
+def fill_for_name(
+    page, name: str, delay_after=0.7, try_normalized=False, reuse=False
+) -> str:
     """
     Perform a single search and return:
       - 'L.xxxxx' (preferred if exists),
@@ -225,35 +236,67 @@ def fill_for_name(page, name: str, delay_after=0.7, try_normalized=False, reuse=
 
 def main():
     ap = argparse.ArgumentParser(
-        description="Fill NCLBGC license numbers (Account #) into Excel Column B.")
-    ap.add_argument("--input", required=True,
-                    help="Path to Excel file (.xlsx)")
-    ap.add_argument("--sheet", default=None,
-                    help="Worksheet name (default: first sheet)")
-    ap.add_argument("--name-col", default="A",
-                    help="Company name column (letter or header). Default: A")
-    ap.add_argument("--license-col", default="B",
-                    help="License number column (letter or header). Default: B")
-    ap.add_argument("--overwrite", action="store_true",
-                    help="Overwrite existing values in license column")
-    ap.add_argument("--headful", action="store_true",
-                    help="Show browser window (for debugging)")
-    ap.add_argument("--pause", type=float, default=0.7,
-                    help="Delay between searches (seconds)")
-    ap.add_argument("--limit", type=int, default=None,
-                    help="Process only first N rows (testing)")
-    ap.add_argument("--start-row", type=int, default=None,
-                    help="First Excel row to process (1-based; data starts at row 2)")
-    ap.add_argument("--end-row", type=int, default=None,
-                    help="Last Excel row to process (inclusive, 1-based)")
-    ap.add_argument("--out", default=None,
-                    help="Output path (default: <input>.filled.xlsx)")
-    ap.add_argument("--normalize", action="store_true",
-                    help="Retry with normalized company names (drops Inc./LLC, punctuation)")
-    ap.add_argument("--log-level", choices=["none", "warn", "all"], default="warn",
-                    help="Console logging: none, warn (misses/pending), or all rows. Default: warn.")
-    ap.add_argument("--reuse", action="store_true",
-                    help="Reuse the same search page for all rows (no full reload). ~40% faster")
+        description="Fill NCLBGC license numbers (Account #) into Excel Column B."
+    )
+    ap.add_argument("--input", required=True, help="Path to Excel file (.xlsx)")
+    ap.add_argument(
+        "--sheet", default=None, help="Worksheet name (default: first sheet)"
+    )
+    ap.add_argument(
+        "--name-col",
+        default="A",
+        help="Company name column (letter or header). Default: A",
+    )
+    ap.add_argument(
+        "--license-col",
+        default="B",
+        help="License number column (letter or header). Default: B",
+    )
+    ap.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Overwrite existing values in license column",
+    )
+    ap.add_argument(
+        "--headful", action="store_true", help="Show browser window (for debugging)"
+    )
+    ap.add_argument(
+        "--pause", type=float, default=0.7, help="Delay between searches (seconds)"
+    )
+    ap.add_argument(
+        "--limit", type=int, default=None, help="Process only first N rows (testing)"
+    )
+    ap.add_argument(
+        "--start-row",
+        type=int,
+        default=None,
+        help="First Excel row to process (1-based; data starts at row 2)",
+    )
+    ap.add_argument(
+        "--end-row",
+        type=int,
+        default=None,
+        help="Last Excel row to process (inclusive, 1-based)",
+    )
+    ap.add_argument(
+        "--out", default=None, help="Output path (default: <input>.filled.xlsx)"
+    )
+    ap.add_argument(
+        "--normalize",
+        action="store_true",
+        help="Retry with normalized company names (drops Inc./LLC, punctuation)",
+    )
+    ap.add_argument(
+        "--log-level",
+        choices=["none", "warn", "all"],
+        default="warn",
+        help="Console logging: none, warn (misses/pending), or all rows. Default: warn.",
+    )
+    ap.add_argument(
+        "--reuse",
+        action="store_true",
+        help="Reuse the same search page for all rows (no full reload). ~40% faster",
+    )
     args = ap.parse_args()
 
     in_path = Path(args.input)
@@ -261,17 +304,20 @@ def main():
         raise SystemExit(f"Input not found: {in_path}")
 
     # Load Excel
-    df = pd.read_excel(
-        in_path, sheet_name=args.sheet) if args.sheet else pd.read_excel(in_path)
+    df = (
+        pd.read_excel(in_path, sheet_name=args.sheet)
+        if args.sheet
+        else pd.read_excel(in_path)
+    )
     name_idx, lic_idx = get_col_indices(df, args.name_col, args.license_col)
 
     # Ensure the license column can hold text but skip slow conversions if already string
     if not ptypes.is_string_dtype(df.iloc[:, lic_idx]):
         df.iloc[:, lic_idx] = df.iloc[:, lic_idx].astype(  # type: ignore
-            "string")  # type: ignore
+            "string"
+        )  # type: ignore
 
-    out_path = Path(args.out) if args.out else in_path.with_suffix(
-        ".filled.xlsx")
+    out_path = Path(args.out) if args.out else in_path.with_suffix(".filled.xlsx")
 
     # Determine rows to process
     total = len(df)
@@ -287,10 +333,13 @@ def main():
 
     with sync_playwright() as p:
         browser = p.chromium.launch(
-            headless=not args.headful, slow_mo=80 if args.headful else 0)
+            headless=not args.headful, slow_mo=80 if args.headful else 0
+        )
         context = browser.new_context(
-            user_agent=("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                        "(KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"),
+            user_agent=(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+            ),
             viewport={"width": 1280, "height": 900},
         )
         page = context.new_page()
@@ -306,8 +355,13 @@ def main():
                 continue
 
             # Respect existing values unless overwrite
-            current = str(df.iat[i, lic_idx]) if pd.notna(  # type: ignore
-                df.iat[i, lic_idx]) else ""  # type: ignore
+            current = (
+                str(df.iat[i, lic_idx])
+                if pd.notna(  # type: ignore
+                    df.iat[i, lic_idx]
+                )
+                else ""
+            )  # type: ignore
             if current and not args.overwrite:
                 continue
 
@@ -315,20 +369,26 @@ def main():
             result = "NA"
             try:
                 result = fill_for_name(
-                    page, name, delay_after=args.pause, try_normalized=args.normalize)
+                    page, name, delay_after=args.pause, try_normalized=args.normalize
+                )
             except Exception as e:
                 tqdm.write(f"  ! lookup failed for {name!r}: {e}")
                 result = "NA"
 
             # Write: 'L.xxxxx' | 'PENDING' | 'NA'
-            df.iat[i, lic_idx] = str(result) if pd.notna(  # type: ignore
-                result) else "NA"  # type: ignore
+            df.iat[i, lic_idx] = (
+                str(result)
+                if pd.notna(  # type: ignore
+                    result
+                )
+                else "NA"
+            )  # type: ignore
 
             # Logging
             if args.log_level == "all":
-                print(f'Row {i+2}: "{name}" -> {result}')
+                print(f'Row {i + 2}: "{name}" -> {result}')
             elif args.log_level == "warn" and result in {"NA", "PENDING"}:
-                print(f'Row {i+2}: "{name}" -> {result}')
+                print(f'Row {i + 2}: "{name}" -> {result}')
 
             time.sleep(args.pause)
 

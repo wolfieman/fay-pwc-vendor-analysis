@@ -7,6 +7,7 @@ Writes a GitHub-safe sample + QA counts to --outdir (full SSOT optional via --fu
 Copyright © 2026 Wolfgang Sanyer
 Licensed under the Polyform Noncommercial License 1.0.0 (see LICENSE).
 """
+
 import argparse
 from pathlib import Path
 
@@ -35,8 +36,17 @@ def load_norm(path: Path, vendor_cols=("vendor_name", "vendor")):
 
     # keep a minimal, consistent set of columns
     keep = [
-        c for c in df.columns
-        if c in {"vendor_key", "active_status", "industry", "utilities_yn", "hub_status", "license_number"}
+        c
+        for c in df.columns
+        if c
+        in {
+            "vendor_key",
+            "active_status",
+            "industry",
+            "utilities_yn",
+            "hub_status",
+            "license_number",
+        }
     ]
     return df[keep].copy()
 
@@ -49,8 +59,11 @@ def main():
     ap.add_argument("--master", required=True)
     ap.add_argument("--pwc", required=True)
     ap.add_argument("--outdir", default="data/processed")
-    ap.add_argument("--full-xlsx", default=None,
-                    help="Optional path (e.g., Teams) to write full SSOT Excel.")
+    ap.add_argument(
+        "--full-xlsx",
+        default=None,
+        help="Optional path (e.g., Teams) to write full SSOT Excel.",
+    )
     args = ap.parse_args()
 
     outdir = Path(args.outdir)
@@ -68,9 +81,8 @@ def main():
     merged = pd.concat([df_hub, df_mas, df_pwc], ignore_index=True)
 
     # --- Merge and aggregate vendor records ---
-    merged = (
-        merged.groupby("vendor_key", as_index=False)
-              .agg(lambda s: s.ffill().bfill().iloc[0] if s.notna().any() else None)
+    merged = merged.groupby("vendor_key", as_index=False).agg(
+        lambda s: s.ffill().bfill().iloc[0] if s.notna().any() else None
     )
 
     # infer correct dtypes (prevents FutureWarning about silent downcasting)
@@ -87,12 +99,14 @@ def main():
     sample.to_csv(outdir / "pwc-vendors-ssot-sample.csv", index=False)
 
     # QA counts
-    qa = pd.DataFrame({
-        "total_unique_vendors": [len(merged)],
-        "in_hub": [merged["in_hub"].sum()],
-        "in_master": [merged["in_master"].sum()],
-        "in_pwc": [merged["in_pwc"].sum()],
-    })
+    qa = pd.DataFrame(
+        {
+            "total_unique_vendors": [len(merged)],
+            "in_hub": [merged["in_hub"].sum()],
+            "in_master": [merged["in_master"].sum()],
+            "in_pwc": [merged["in_pwc"].sum()],
+        }
+    )
     qa.to_csv(outdir / "pwc-vendors-qa-summary.csv", index=False)
 
     # Optional full Excel (Teams / shared location)

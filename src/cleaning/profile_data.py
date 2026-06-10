@@ -26,12 +26,17 @@ def profile_one(path: Path, id_col: str | None):
 
 def main():
     ap = argparse.ArgumentParser(description="Profile datasets (no mutation).")
-    ap.add_argument("--files", nargs="+", required=True,
-                    help="Paths to files (csv/xlsx).")
-    ap.add_argument("--id-col", default=None,
-                    help="Optional ID column name (after header normalization).")
-    ap.add_argument("--outdir", default="data/processed",
-                    help="Output directory for summaries.")
+    ap.add_argument(
+        "--files", nargs="+", required=True, help="Paths to files (csv/xlsx)."
+    )
+    ap.add_argument(
+        "--id-col",
+        default=None,
+        help="Optional ID column name (after header normalization).",
+    )
+    ap.add_argument(
+        "--outdir", default="data/processed", help="Output directory for summaries."
+    )
     args = ap.parse_args()
 
     outdir = Path(args.outdir)
@@ -45,7 +50,8 @@ def main():
         summary, info = profile_one(p, args.id_col)
         # per-file summary
         summary.reset_index().to_csv(
-            outdir / f"{p.stem}-profile-summary.csv", index=False)
+            outdir / f"{p.stem}-profile-summary.csv", index=False
+        )
         # for combined view
         s2 = summary.reset_index()
         s2.insert(0, "file", p.name)

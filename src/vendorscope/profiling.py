@@ -10,8 +10,7 @@ import pandas as pd
 
 from vendorscope.text import snake
 
-YN_MAP = {"y": True, "yes": True, "n": False,
-          "no": False, "true": True, "false": False}
+YN_MAP = {"y": True, "yes": True, "n": False, "no": False, "true": True, "false": False}
 
 
 def normalize(df: pd.DataFrame) -> pd.DataFrame:
@@ -65,12 +64,18 @@ def profile_dataframe(
     miss = df.isna().sum().rename("n_missing")
     pct_miss = (miss / len(df) * 100).rename("pct_missing")
 
-    zero = (num_df == 0).sum().rename("n_zero") if not num_df.empty else pd.Series(dtype="int64")
+    zero = (
+        (num_df == 0).sum().rename("n_zero")
+        if not num_df.empty
+        else pd.Series(dtype="int64")
+    )
 
     base = pd.concat([miss, pct_miss], axis=1)
 
     if not num_stats.empty:
-        base = base.join(num_stats[["count", "nunique", "min", "max", "mean", "std"]], how="left")
+        base = base.join(
+            num_stats[["count", "nunique", "min", "max", "mean", "std"]], how="left"
+        )
     if not obj_stats.empty:
         # don't overwrite numeric stats; fill counts for object-only columns
         base = base.combine_first(obj_stats[["count", "nunique"]])
