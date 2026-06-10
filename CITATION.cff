@@ -19,8 +19,8 @@ authors:
 version: "0.1.0"
 date-released: "2026-05-25"
 license: Polyform-Noncommercial-1.0.0
-url: "https://github.com/wolfieman/fay-pwc-vendor-analysis"
-repository-code: "https://github.com/wolfieman/fay-pwc-vendor-analysis"
+url: "https://github.com/wolfieman/vendorscope"
+repository-code: "https://github.com/wolfieman/vendorscope"
 keywords:
   - data-quality
   - vendor-analysis

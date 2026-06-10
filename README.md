@@ -2,7 +2,7 @@
 
 **Vendor readiness & availability analytics.** VendorScope turns fragmented public vendor and licensing data into an audited, decision-ready view of who is registered, licensed, available, and ready for public-sector procurement, built on a documented and reusable data-quality pipeline.
 
-[![CI](https://github.com/wolfieman/fay-pwc-vendor-analysis/actions/workflows/ci.yml/badge.svg)](https://github.com/wolfieman/fay-pwc-vendor-analysis/actions/workflows/ci.yml)
+[![CI](https://github.com/wolfieman/vendorscope/actions/workflows/ci.yml/badge.svg)](https://github.com/wolfieman/vendorscope/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![uv](https://img.shields.io/badge/env-uv-261230?logo=astral&logoColor=white)
 ![pandas](https://img.shields.io/badge/pandas-3.0-150458?logo=pandas&logoColor=white)
