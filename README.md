@@ -18,7 +18,7 @@ but the vendor data was incomplete and unverified. I assembled the data from two
 built a documented cleaning-and-audit pipeline, and produced descriptive analytics across **295 vendors**.
 
 **Headline results:**
-- **65.4%** of vendors (193 of 295) had **missing HUB (Historically Underutilized Business) status** — the single biggest data-quality gap.
+- **65.4%** of vendors (193 of 295) had **missing HUB (Historically Underutilized Business) status**, the single biggest data-quality gap.
 - Of vendors with known status, **80 are HUB-certified** and **22 are explicitly not certified**.
 - **Recommendation:** prioritize outreach to the **22 non-HUB-certified vendors** for economic-inclusion conversations, and close the HUB-status gap at vendor intake.
 
@@ -32,7 +32,7 @@ built a documented cleaning-and-audit pipeline, and produced descriptive analyti
 
 PWC works with hundreds of contractors but lacked a single, trustworthy view of *who* its vendors
 are, *what they're licensed to do*, and *which qualify for economic-inclusion programs*. The source
-records were spread across systems, inconsistently formatted, and full of gaps — which made any
+records were spread across systems, inconsistently formatted, and full of gaps, which made any
 downstream analytics unreliable. The goal: a clean, auditable vendor source-of-truth plus a
 **reusable data-quality protocol** that PWC could keep applying.
 
@@ -55,21 +55,21 @@ Acquisition  →  Cleaning  →  Profiling  →  Audit  →  Descriptive analyti
  Playwright)     standardize)   stats)        report)        geography)
 ```
 
-1. **Acquisition** (`src/acquisition/`) — scraped NCLBGC license details (Selenium) and resolved
+1. **Acquisition** (`src/acquisition/`): scraped NCLBGC license details (Selenium) and resolved
    license numbers by company name (Playwright), merged with the eVP vendor/HUB export.
-2. **Cleaning** (`src/cleaning/clean_data.py`) — applied a documented protocol: trim whitespace,
+2. **Cleaning** (`src/cleaning/clean_data.py`) applied a documented protocol: trim whitespace,
    lowercase emails, format phones `###-###-####`, hybrid-case business names with standardized
    legal suffixes, dates `MM/DD/YYYY`, license numbers and ZIPs stored as **text** (leading zeros
    preserved), de-duplication on `Vendor_Name + License_Number`, and cross-validation of every
    vendor license against the NCLBGC source.
-3. **Profiling** (`src/cleaning/profile_data.py`) — per-column counts, missingness, and basic stats.
-4. **Audit** (`src/cleaning/make_audit.py`) — a Markdown data-quality report ranking columns by missingness.
-5. **Analytics** — descriptive analysis (HUB distribution, license levels, geography) delivered as
+3. **Profiling** (`src/cleaning/profile_data.py`): per-column counts, missingness, and basic stats.
+4. **Audit** (`src/cleaning/make_audit.py`): a Markdown data-quality report ranking columns by missingness.
+5. **Analytics**: descriptive analysis (HUB distribution, license levels, geography) delivered as
    an infographic and a video overview.
 
 ## Key findings (verified against the data)
 
-**HUB certification — a major data gap**
+**HUB certification: a major data gap**
 
 | HUB status | Vendors | Share |
 |---|--:|--:|
@@ -94,7 +94,7 @@ License status: **263 active**, 23 invalid, 9 archived. *\*Among the 18 vendors 
 
 ## Recommendation
 
-1. **Contact the 22 non-HUB-certified vendors** — a small, actionable list for economic-inclusion outreach.
+1. **Contact the 22 non-HUB-certified vendors**, a small, actionable list for economic-inclusion outreach.
 2. **Close the HUB-status gap** (193 missing) by capturing certification at vendor intake.
 3. **Adopt the cleaning protocol** as the standing data-quality standard for vendor onboarding.
 
@@ -107,9 +107,9 @@ License status: **263 active**, 23 invalid, 9 archived. *\*Among the 18 vendors 
 │  └─ cleaning/         # clean · merge · profile · audit
 ├─ data/
 │  ├─ DATA_DICTIONARY.md   # full schema (PII flagged)
-│  ├─ sample/              # anonymized data (PII removed) — runs the pipeline out of the box
-│  ├─ raw/                 # real source files — gitignored (PII)
-│  └─ processed/           # pipeline outputs — gitignored
+│  ├─ sample/              # anonymized data (PII removed); runs out of the box
+│  ├─ raw/                 # real source files (gitignored, PII)
+│  └─ processed/           # pipeline outputs (gitignored)
 ├─ reports/             # written analysis
 ├─ assets/              # infographic + video overview (video via Git LFS)
 ├─ docs/                # data-cleaning protocol + master-data documentation
@@ -141,7 +141,7 @@ uv run python src/cleaning/make_audit.py         # writes data/processed/data_au
 
 ## License & contact
 
-Source-available under the **PolyForm Noncommercial License 1.0.0** (see [`LICENSE`](LICENSE)) —
+Source-available under the **PolyForm Noncommercial License 1.0.0** (see [`LICENSE`](LICENSE)),
 free to view, study, and share for non-commercial purposes.
 
 **Wolfgang Sanyer** · [wolfgang.sanyer@gmail.com](mailto:wolfgang.sanyer@gmail.com)
