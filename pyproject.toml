@@ -3,7 +3,7 @@ name = "vendorscope"
 version = "0.1.0"
 description = "VendorScope: vendor readiness & availability analytics. Turns public vendor and licensing data into an audited, decision-ready view of supplier availability and procurement readiness."
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.14"
 license = { file = "LICENSE" }
 authors = [{ name = "Wolfgang Sanyer", email = "wolfgang.sanyer@gmail.com" }]
 dependencies = [
@@ -15,10 +15,17 @@ dependencies = [
     "webdriver-manager>=4.0",
 ]
 
-# This repo is an analysis project, not an installable library:
-# uv manages dependencies but does not build/install the project itself.
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# Only the pure-core package ships in the wheel; the acquisition/cleaning
+# scripts are run by file path, not imported as part of a distribution.
+[tool.hatch.build.targets.wheel]
+packages = ["src/vendorscope"]
+
 [tool.uv]
-package = false
+package = true
 
 [tool.ruff]
 line-length = 88
