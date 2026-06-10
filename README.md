@@ -139,6 +139,11 @@ uv run python src/cleaning/make_audit.py         # writes data/processed/data_au
 **Python 3.11+** · pandas · openpyxl · tqdm · Selenium + Playwright + webdriver-manager (acquisition)
 · SAS Viya + Excel (analytics) · **uv** (environment & locking).
 
+## Development
+
+Engineering standards, project layout, the toolchain, and how to run the tests and
+pipeline are documented in [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
 ## License & contact
 
 Source-available under the **PolyForm Noncommercial License 1.0.0** (see [`LICENSE`](LICENSE)),
