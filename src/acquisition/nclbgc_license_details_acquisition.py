@@ -10,6 +10,7 @@ Licensed under the Polyform Noncommercial License 1.0.0 (see LICENSE).
 
 import argparse
 import contextlib
+import logging
 import pathlib
 import time
 from dataclasses import dataclass
@@ -17,7 +18,11 @@ from datetime import UTC, datetime
 
 import pandas as pd
 from selenium import webdriver
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import (
+    NoSuchElementException,
+    TimeoutException,
+    WebDriverException,
+)
 from selenium.webdriver import Chrome
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
@@ -29,6 +34,13 @@ from webdriver_manager.chrome import ChromeDriverManager
 
 from vendorscope.columns import autodetect_license_column
 from vendorscope.text import normalize_license
+
+logger = logging.getLogger("vendorscope.acquisition.license_details")
+
+# Chrome window and timeouts.
+WINDOW_SIZE = "1400,1000"
+PAGE_LOAD_TIMEOUT_SECONDS = 45
+QUALIFIER_WAIT_SECONDS = 5
 
 
 # --------------------------- configuration & CLI ------------------------------
@@ -89,10 +101,10 @@ class NCLBGCDetailsScraper:
         opts.add_argument("--disable-blink-features=AutomationControlled")
         opts.add_experimental_option("excludeSwitches", ["enable-automation"])
         opts.add_experimental_option("useAutomationExtension", False)
-        opts.add_argument("--window-size=1400,1000")
+        opts.add_argument(f"--window-size={WINDOW_SIZE}")
         service = Service(ChromeDriverManager().install())
         drv = webdriver.Chrome(service=service, options=opts)
-        drv.set_page_load_timeout(45)
+        drv.set_page_load_timeout(PAGE_LOAD_TIMEOUT_SECONDS)
         return drv
 
     # ------------------------ debug helpers -------------------------
@@ -105,9 +117,9 @@ class NCLBGCDetailsScraper:
             )
             with pathlib.Path(f"{name}.html").open("w", encoding="utf-8") as f:
                 f.write(self.driver.page_source)
-            with contextlib.suppress(Exception):
+            with contextlib.suppress(WebDriverException):
                 self.driver.save_screenshot(f"{name}.png")
-            print(f"Wrote debug snapshot {name}.html")
+            logger.info("Wrote debug snapshot %s.html", name)
         except Exception:
             pass
 
@@ -123,7 +135,7 @@ class NCLBGCDetailsScraper:
                 if self.driver.find_elements(By.ID, "AccountNumber"):
                     return
                 self.driver.switch_to.default_content()
-        except Exception:
+        except WebDriverException:
             pass
 
     def _find_search_input(self):
@@ -141,7 +153,7 @@ class NCLBGCDetailsScraper:
         for by, sel in selectors:
             try:
                 return self.driver.find_element(by, sel)
-            except Exception:
+            except NoSuchElementException:
                 continue
         return None
 
@@ -149,22 +161,31 @@ class NCLBGCDetailsScraper:
         self.open_search()
         inp = self._find_search_input()
         if not inp:
-            print("⚠️  Could not find search input.")
+            logger.warning("⚠️  Could not find search input.")
             self._dump_debug("input_missing")
             return False
+        self._submit_search(inp, lic)
+        if not self._wait_results_table():
+            return False
+        if not self._click_detail_row(lic):
+            return False
+        return self._await_detail_dialog()
 
-        with contextlib.suppress(Exception):
+    def _submit_search(self, inp, lic: str) -> None:
+        """Type the license number into the search box and submit it."""
+        with contextlib.suppress(WebDriverException):
             inp.clear()
         inp.send_keys(lic)
         time.sleep(self.cfg.small_pause)
         # press Enter or click Search
         try:
             inp.send_keys(Keys.ENTER)
-        except Exception:
-            with contextlib.suppress(Exception):
+        except WebDriverException:
+            with contextlib.suppress(WebDriverException):
                 self.driver.find_element(By.ID, "subBtn").click()
 
-        # Wait for results table containing an anchor with ShowAccountDetails
+    def _wait_results_table(self) -> bool:
+        """Wait for the results table to load; return False on timeout."""
         try:
             self.wait.until(
                 EC.presence_of_element_located(
@@ -174,13 +195,14 @@ class NCLBGCDetailsScraper:
                     )
                 )
             )
+            return True
         except TimeoutException:
-            print("⚠️  Search results did not load.")
+            logger.warning("⚠️  Search results did not load.")
             self._dump_debug("search_timeout")
             return False
 
-        # Click the result anchor matching the license (prefer exact "L.<lic>")
-        clicked = False
+    def _click_detail_row(self, lic: str) -> bool:
+        """Click the result anchor matching the license (prefer exact 'L.<lic>')."""
         xpaths = [
             f"//table[@id='AccountSearchTable']//a[normalize-space()=concat('L.','{lic}')]",
             f"//table[@id='AccountSearchTable']//a[contains(normalize-space(),'{lic}')]",
@@ -190,17 +212,15 @@ class NCLBGCDetailsScraper:
             try:
                 link = self.wait.until(EC.element_to_be_clickable((By.XPATH, xp)))
                 link.click()
-                clicked = True
-                break
-            except Exception:
+                return True
+            except TimeoutException, WebDriverException:
                 continue
+        logger.warning("⚠️  Could not click into detail view.")
+        self._dump_debug("click_detail_failed")
+        return False
 
-        if not clicked:
-            print("⚠️  Could not click into detail view.")
-            self._dump_debug("click_detail_failed")
-            return False
-
-        # Wait for the inline dialog to be visible and populated via AJAX
+    def _await_detail_dialog(self) -> bool:
+        """Wait for the inline detail dialog to load via AJAX; cache its context."""
         try:
             self.wait.until(EC.visibility_of_element_located((By.ID, "dialog-form")))
             self.wait.until(
@@ -214,7 +234,7 @@ class NCLBGCDetailsScraper:
             self._detail_context = self.driver.find_element(By.ID, "dialog-form")
             return True
         except TimeoutException:
-            print("Detail view did not show expected elements")
+            logger.warning("Detail view did not show expected elements")
             self._dump_debug("detail_missing")
             return False
 
@@ -234,7 +254,7 @@ class NCLBGCDetailsScraper:
             try:
                 el = root.find_element(By.XPATH, xp)
                 return el.text.strip()
-            except Exception:
+            except NoSuchElementException:
                 continue
         return ""
 
@@ -251,12 +271,12 @@ class NCLBGCDetailsScraper:
         root = self._detail_context if self._detail_context is not None else self.driver
         try:
             # If we're on the page root, narrow to the dialog panel when present
-            with contextlib.suppress(Exception):
+            with contextlib.suppress(NoSuchElementException):
                 root = root.find_element(By.ID, "dialog-form")
 
             # Hint that qualifiers section/table exists (don't fail if timeout)
             with contextlib.suppress(TimeoutException):
-                WebDriverWait(self.driver, 5).until(
+                WebDriverWait(self.driver, QUALIFIER_WAIT_SECONDS).until(
                     EC.presence_of_element_located(
                         (
                             By.XPATH,
@@ -289,14 +309,14 @@ class NCLBGCDetailsScraper:
                     q_nums.append(qnum)
                     q_statuses.append(stat)
 
-        except Exception:
+        except WebDriverException:
             return "", "", ""
 
         return "; ".join(q_nums), "; ".join(q_names), "; ".join(q_statuses)
 
     def extract_license_details(self) -> dict[str, str]:
         if self._detail_context is None:
-            print("Detail view not ready")
+            logger.warning("Detail view not ready")
             self._dump_debug("detail_missing")
             return {"Error": "Detail context not found"}
 
@@ -330,7 +350,7 @@ class NCLBGCDetailsScraper:
                     "//*[contains(@class,'display-field')][1]",
                 )
                 classes_text = node.text.strip().replace("\n", "; ")
-            except Exception:
+            except NoSuchElementException:
                 try:
                     node = self._detail_context.find_element(
                         By.XPATH,
@@ -338,7 +358,7 @@ class NCLBGCDetailsScraper:
                         "[contains(@class,'display-field')][1]",
                     )
                     classes_text = node.text.strip().replace("\n", "; ")
-                except Exception:
+                except NoSuchElementException:
                     classes_text = ""
             details["Classifications"] = classes_text
 
@@ -349,15 +369,15 @@ class NCLBGCDetailsScraper:
             details["Qualifier_Status"] = qstat
 
         except Exception as e:
-            print("Extraction error type " + e.__class__.__name__)
+            logger.warning("Extraction error type %s", e.__class__.__name__)
             with contextlib.suppress(Exception):
-                print("Extraction error repr " + repr(e))
+                logger.warning("Extraction error repr %r", e)
             self._dump_debug("extract_exception")
 
         return details
 
     def close(self) -> None:
-        with contextlib.suppress(Exception):
+        with contextlib.suppress(WebDriverException):
             self.driver.quit()
 
 
@@ -371,7 +391,7 @@ def run_scrape(
     headless: bool,
     pause: float,
 ) -> None:
-    print(f"Loading {input_file}")
+    logger.info("Loading %s", input_file)
     df = (
         pd.read_excel(input_file, sheet_name=sheet)
         if sheet
@@ -390,7 +410,7 @@ def run_scrape(
             lic_list.append(n)
     if limit:
         lic_list = lic_list[:limit]
-    print(f"Processing {len(lic_list)} licenses")
+    logger.info("Processing %d licenses", len(lic_list))
 
     cfg = ScraperConfig(headless=headless, small_pause=pause)
     scraper = NCLBGCDetailsScraper(cfg)
@@ -398,8 +418,8 @@ def run_scrape(
     results: list[dict[str, str]] = []
     try:
         for idx, lic in enumerate(lic_list, 1):
-            print(f"[{idx}/{len(lic_list)}] License {lic}")
-            print(f"Searching for license {lic}")
+            logger.info("[%d/%d] License %s", idx, len(lic_list), lic)
+            logger.info("Searching for license %s", lic)
             if not scraper.search_license(lic):
                 results.append(
                     {"License_Number": lic, "Error": "Search or click failed"}
@@ -439,12 +459,13 @@ def run_scrape(
     out = out[cols]
 
     out.to_excel(out_file, index=False)
-    print(f"Saved: {out_file}")
-    print(f"Records: {len(out)}")
+    logger.info("Saved: %s", out_file)
+    logger.info("Records: %d", len(out))
 
 
 def main():
     args = parse_args()
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     run_scrape(
         args.input,
         args.sheet,
