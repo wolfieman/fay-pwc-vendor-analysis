@@ -10,6 +10,7 @@ Licensed under the Polyform Noncommercial License 1.0.0 (see LICENSE).
 
 import argparse
 import contextlib
+import logging
 import re
 import time
 from datetime import datetime
@@ -17,6 +18,7 @@ from pathlib import Path
 
 import pandas as pd
 import pandas.api.types as ptypes
+from playwright.sync_api import Error as PWError
 from playwright.sync_api import TimeoutError as PWTimeout
 from playwright.sync_api import sync_playwright
 from tqdm import tqdm
@@ -24,7 +26,26 @@ from tqdm import tqdm
 from vendorscope.columns import get_col_indices
 from vendorscope.text import normalize_name
 
+logger = logging.getLogger("vendorscope.acquisition.licenses")
+
 SEARCH_URL = "https://portal.nclbgc.org/Public/Search"
+
+# Playwright timeouts (ms) and search tuning.
+DEFAULT_TIMEOUT_MS = 10_000
+COOKIE_TIMEOUT_MS = 3_000
+SEARCH_CLICK_TIMEOUT_MS = 4_000
+ROWS_TIMEOUT_MS = 8_000
+FILL_CLEAR_TIMEOUT_MS = 1_500
+FILL_TIMEOUT_MS = 4_000
+LAST_RESORT_FILL_TIMEOUT_MS = 2_000
+MAX_FALLBACK_INPUTS = 6
+SLOW_MO_MS = 80
+VIEWPORT = {"width": 1280, "height": 900}
+USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+)
+ZERO_ENTRIES_TEXT = "showing 0 to 0 of 0 entries"
 
 # ---------- DataFrame helpers ----------
 
@@ -34,26 +55,26 @@ def save_xlsx(df: pd.DataFrame, out_path: Path):
     try:
         with pd.ExcelWriter(out_path, engine="openpyxl", mode="w") as xw:
             df.to_excel(xw, index=False)
-        print(f"✅ Done. Wrote: {out_path}")
+        logger.info("✅ Done. Wrote: %s", out_path)
     except PermissionError:
         alt = out_path.with_name(
             out_path.stem + f".{datetime.now():%Y%m%d-%H%M%S}.xlsx"
         )
         with pd.ExcelWriter(alt, engine="openpyxl", mode="w") as xw:
             df.to_excel(xw, index=False)
-        print(f"⚠️ File in use: {out_path}\n   ➜ Wrote instead: {alt}")
+        logger.warning("⚠️ File in use: %s\n   ➜ Wrote instead: %s", out_path, alt)
 
 
 # ---------- Playwright helpers ----------
 
 
 def goto_search(page):
-    page.context.set_default_timeout(10000)
+    page.context.set_default_timeout(DEFAULT_TIMEOUT_MS)
     page.goto(SEARCH_URL, wait_until="domcontentloaded")
     # Try to close cookie banner if present
-    with contextlib.suppress(Exception):
+    with contextlib.suppress(PWError):
         page.get_by_role("button", name=re.compile(r"accept|agree|ok", re.I)).click(
-            timeout=3000
+            timeout=COOKIE_TIMEOUT_MS
         )
 
 
@@ -64,9 +85,9 @@ def click_search(page):
         "form button[type=submit]",
     ]:
         try:
-            page.locator(locator).click(timeout=4000)
+            page.locator(locator).click(timeout=SEARCH_CLICK_TIMEOUT_MS)
             return
-        except Exception:
+        except PWError:
             continue
     page.get_by_role("button", name="Search").click()
 
@@ -79,7 +100,7 @@ def header_index(page, text: str) -> int:
         try:
             if t in ths.nth(i).inner_text().strip().lower():
                 return i
-        except Exception:
+        except PWError:
             pass
     return -1
 
@@ -92,11 +113,11 @@ def extract_row_account_text(row_locator) -> str:
             txt = link.inner_text().strip()
             if txt:
                 return txt
-    except Exception:
+    except PWError:
         pass
     try:
         return row_locator.locator("td").first.inner_text().strip()
-    except Exception:
+    except PWError:
         return ""
 
 
@@ -135,7 +156,7 @@ def classify_accounts(page, company_name: str) -> tuple[str | None, bool]:
                         idx for idx in candidate_indexes if idx != i
                     ]
                     break
-            except Exception:
+            except PWError:
                 pass
 
     for i in candidate_indexes:
@@ -151,6 +172,62 @@ def classify_accounts(page, company_name: str) -> tuple[str | None, bool]:
         break
 
     return non_pending, pending_present
+
+
+def _fill_company_input(page, q: str) -> bool:
+    """Type the query into the Company Name field; return True if a field was filled."""
+    for sel in [
+        "input[placeholder='Company Name']",
+        "input#CompanyName",
+        "input[name='CompanyName']",
+        "xpath=//label[contains(.,'Company Name')]/following::input[1]",
+    ]:
+        try:
+            el = page.locator(sel)
+            # clear any existing value then type the new query
+            el.fill("", timeout=FILL_CLEAR_TIMEOUT_MS)
+            el.fill(q, timeout=FILL_TIMEOUT_MS)
+            return True
+        except PWError:
+            continue
+    # last resort: first text input inside a form
+    inputs = page.locator("form input[type='text'], form input")
+    for i in range(min(inputs.count(), MAX_FALLBACK_INPUTS)):
+        try:
+            el = inputs.nth(i)
+            # prefer an empty field (the Company Name box is
+            # usually empty between searches)
+            if not el.input_value():
+                el.fill(q, timeout=LAST_RESORT_FILL_TIMEOUT_MS)
+                return True
+        except PWError:
+            continue
+    return False
+
+
+def _read_result(page, q: str, delay_after: float) -> str | None:
+    """Submit the search and classify the result for one query.
+
+    Returns 'L.xxxxx' / 'PENDING' / 'NA' as a final answer, or None to signal
+    "no results for this query, try the next variant".
+    """
+    click_search(page)
+    time.sleep(delay_after)
+
+    # Wait for rows or a clear "0 entries" message
+    try:
+        page.wait_for_selector("table tbody tr", timeout=ROWS_TIMEOUT_MS)
+    except PWTimeout:
+        if ZERO_ENTRIES_TEXT in page.content().lower():
+            return None  # try next query variant if any
+        return "NA"
+
+    non_pending, pending_present = classify_accounts(page, q)
+    if non_pending:
+        return non_pending
+    if pending_present:
+        return "PENDING"
+    return None  # rows present but no usable account; try next variant
 
 
 def fill_for_name(
@@ -175,59 +252,11 @@ def fill_for_name(
         # Only load the page when *not* reusing
         if not reuse:
             goto_search(page)
-
-        # Fill Company Name input using multiple selectors
-        filled = False
-        for sel in [
-            "input[placeholder='Company Name']",
-            "input#CompanyName",
-            "input[name='CompanyName']",
-            "xpath=//label[contains(.,'Company Name')]/following::input[1]",
-        ]:
-            try:
-                el = page.locator(sel)
-                # clear any existing value then type the new query
-                el.fill("", timeout=1500)
-                el.fill(q, timeout=4000)
-                filled = True
-                break
-            except Exception:
-                continue
-        if not filled:
-            # last resort: first text input inside a form
-            inputs = page.locator("form input[type='text'], form input")
-            for i in range(min(inputs.count(), 6)):
-                try:
-                    el = inputs.nth(i)
-                    # prefer an empty field (the Company Name box is
-                    # usually empty between searches)
-                    if not el.input_value():
-                        el.fill(q, timeout=2000)
-                        filled = True
-                        break
-                except Exception:
-                    pass
-        if not filled:
+        if not _fill_company_input(page, q):
             continue
-
-        click_search(page)
-        time.sleep(delay_after)
-
-        # Wait for rows or a clear "0 entries" message
-        try:
-            page.wait_for_selector("table tbody tr", timeout=8000)
-        except PWTimeout:
-            txt = page.content().lower()
-            if "showing 0 to 0 of 0 entries" in txt:
-                # try next query variant if any
-                continue
-            return "NA"
-
-        non_pending, pending_present = classify_accounts(page, q)
-        if non_pending:
-            return non_pending
-        if pending_present:
-            return "PENDING"
+        result = _read_result(page, q, delay_after)
+        if result is not None:
+            return result
 
     return "NA"
 
@@ -301,6 +330,11 @@ def main():
     )
     args = ap.parse_args()
 
+    logging.basicConfig(
+        level=logging.CRITICAL if args.log_level == "none" else logging.INFO,
+        format="%(message)s",
+    )
+
     in_path = Path(args.input)
     if not in_path.exists():
         raise SystemExit(f"Input not found: {in_path}")
@@ -336,14 +370,11 @@ def main():
 
     with sync_playwright() as p:
         browser = p.chromium.launch(
-            headless=not args.headful, slow_mo=80 if args.headful else 0
+            headless=not args.headful, slow_mo=SLOW_MO_MS if args.headful else 0
         )
         context = browser.new_context(
-            user_agent=(
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                "(KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
-            ),
-            viewport={"width": 1280, "height": 900},
+            user_agent=USER_AGENT,
+            viewport=VIEWPORT,
         )
         page = context.new_page()
 
