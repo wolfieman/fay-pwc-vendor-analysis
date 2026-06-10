@@ -1,6 +1,6 @@
-# Vendor Availability & Licensing Data-Quality Protocol
+# VendorScope
 
-**A reproducible data pipeline and analysis that turned a fragmented vendor list for a municipal utility into an audited, decision-ready dataset — surfacing a 65% data-quality gap and a concrete supplier-outreach recommendation.**
+**Vendor readiness & availability analytics.** VendorScope turns fragmented public vendor and licensing data into an audited, decision-ready view of who is registered, licensed, available, and ready for public-sector procurement, built on a documented and reusable data-quality pipeline.
 
 [![CI](https://github.com/wolfieman/fay-pwc-vendor-analysis/actions/workflows/ci.yml/badge.svg)](https://github.com/wolfieman/fay-pwc-vendor-analysis/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
@@ -10,9 +10,9 @@
 
 ---
 
-## TL;DR
+## TL;DR: flagship case study (Fayetteville PWC)
 
-The **Fayetteville Public Works Commission (PWC)** — a municipal power & water utility — needed
+VendorScope's first real-world application. The **Fayetteville Public Works Commission (PWC)**, a municipal power & water utility, needed
 to understand its contractor/vendor base for supply-chain planning and economic-inclusion goals,
 but the vendor data was incomplete and unverified. I assembled the data from two public sources,
 built a documented cleaning-and-audit pipeline, and produced descriptive analytics across **295 vendors**.

@@ -1,6 +1,6 @@
 cff-version: 1.2.0
 message: "If you reference this work, please cite as below."
-title: "Vendor Availability & Licensing Data-Quality Protocol: A Reproducible Audit of Fayetteville PWC's Vendor Base"
+title: "VendorScope: Vendor Readiness & Availability Analytics"
 abstract: >
   A reproducible data pipeline and descriptive analysis that consolidates a
   fragmented municipal-utility vendor list into an audited, decision-ready

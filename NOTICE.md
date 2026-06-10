@@ -8,8 +8,9 @@ https://polyformproject.org/licenses/noncommercial/1.0.0
 
 ## Project Information
 
-**Project:** Vendor Availability & Licensing Data-Quality Protocol — a reproducible data
-pipeline and analysis of the Fayetteville Public Works Commission (PWC) vendor base.<br>
+**Project:** VendorScope, vendor readiness & availability analytics: a reusable data
+pipeline and analysis engine for public vendor and licensing data. Flagship case study:
+the Fayetteville Public Works Commission (PWC) vendor base.<br>
 **Author / Owner:** Wolfgang Sanyer (personal portfolio project).
 
 ---

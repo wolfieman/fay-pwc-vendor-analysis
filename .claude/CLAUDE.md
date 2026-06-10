@@ -1,4 +1,4 @@
-# Claude Code Instructions — Fay PwC Vendor Analysis
+# Claude Code Instructions — VendorScope
 
 ## This is a PUBLIC repository
 

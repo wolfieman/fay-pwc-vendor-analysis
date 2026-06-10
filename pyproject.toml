@@ -1,7 +1,7 @@
 [project]
-name = "pwc-vendor-analysis"
+name = "vendorscope"
 version = "0.1.0"
-description = "Vendor availability & licensing data-quality analysis for the Fayetteville Public Works Commission (PWC)."
+description = "VendorScope: vendor readiness & availability analytics. Turns public vendor and licensing data into an audited, decision-ready view of supplier availability and procurement readiness."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { file = "LICENSE" }
