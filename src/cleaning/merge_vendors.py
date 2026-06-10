@@ -8,23 +8,11 @@ Copyright © 2026 Wolfgang Sanyer
 Licensed under the Polyform Noncommercial License 1.0.0 (see LICENSE).
 """
 import argparse
-import re
 from pathlib import Path
+
 import pandas as pd
 
-
-def snake(s: str) -> str:
-    s = re.sub(r"[^\w]+", "_", s.strip()).lower()
-    return re.sub(r"__+", "_", s).strip("_")
-
-
-def canon_vendor(v: str) -> str:
-    if pd.isna(v):
-        return ""
-    v = str(v).upper().strip()
-    v = re.sub(r"[^\w\s]", "", v)           # remove punctuation
-    v = re.sub(r"\s+", " ", v)              # collapse spaces
-    return v
+from vendorscope.text import canon_vendor, snake
 
 
 def load_norm(path: Path, vendor_cols=("vendor_name", "vendor")):

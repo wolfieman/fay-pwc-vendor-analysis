@@ -19,33 +19,12 @@ import pandas as pd
 from tqdm import tqdm
 from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 
+from vendorscope.columns import get_col_indices
+from vendorscope.text import normalize_name
+
 SEARCH_URL = "https://portal.nclbgc.org/Public/Search"
 
-# ---------- Name normalization ----------
-SUFFIXES = r"(,?\s+(inc|inc\.|llc|l\.l\.c\.|ltd|ltd\.|co|co\.|corp|corp\.|company|contracting|contractors?))+$"
-
-
-def normalize_name(s: str) -> str:
-    s = (s or "").strip()
-    s = re.sub(r"\s+", " ", s)
-    s = re.sub(SUFFIXES, "", s, flags=re.I)
-    s = re.sub(r"[^\w\s&-]", "", s)  # drop punctuation
-    return s.strip()
-
 # ---------- DataFrame helpers ----------
-
-
-def get_col_indices(df: pd.DataFrame, name_col: str, license_col: str):
-    """Allow column letters (A,B,...) or header names; return integer indices."""
-    def to_idx(key):
-        if isinstance(key, str) and key.strip().isalpha() and len(key.strip()) == 1:
-            return ord(key.strip().upper()) - ord("A")
-        if isinstance(key, str) and key in df.columns:
-            return df.columns.get_loc(key)
-        if isinstance(key, int):
-            return key
-        raise ValueError(f"Can't resolve column: {key}")
-    return to_idx(name_col), to_idx(license_col)
 
 
 def save_xlsx(df: pd.DataFrame, out_path: Path):

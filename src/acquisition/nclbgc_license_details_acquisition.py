@@ -9,7 +9,6 @@ Licensed under the Polyform Noncommercial License 1.0.0 (see LICENSE).
 """
 
 import argparse
-import re
 import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -26,6 +25,9 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
+
+from vendorscope.columns import autodetect_license_column
+from vendorscope.text import normalize_license
 
 
 # --------------------------- configuration & CLI ------------------------------
@@ -49,40 +51,6 @@ def parse_args() -> argparse.Namespace:
 # ------------------------------- utilities -----------------------------------
 def ts_utc() -> str:
     return datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-
-
-def normalize_license(v) -> Optional[str]:
-    """Coerce Excel/Pandas values to a clean license string (e.g., 85168.0 -> '85168')."""
-    if v is None:
-        return None
-    if isinstance(v, int):
-        return str(v)
-    if isinstance(v, float):
-        if v.is_integer():
-            return str(int(v))
-        s = f"{v}".strip()
-        m = re.match(r"^\s*(\d+)\.(\d+)\s*$", s)
-        return (m.group(1) + m.group(2)) if m else re.sub(r"\D", "", s) or None
-    s = str(v).strip()
-    m = re.match(r"^\s*(\d+)(?:\.0+)?\s*$", s)
-    if m:
-        return m.group(1)
-    digits = re.sub(r"\D", "", s)
-    return digits or None
-
-
-def autodetect_license_column(df: pd.DataFrame) -> Optional[str]:
-    candidates = [
-        "License_Number", "LICENSE_NUMBER", "LICENSE", "LICENSE #", "License #",
-        "LicenseNumber", "License No", "LicenseNo", "AccountNumber", "Account Number"
-    ]
-    for c in candidates:
-        if c in df.columns:
-            return c
-    for c in df.columns:
-        if re.search(r"license|account", c, re.I):
-            return c
-    return None
 
 
 # ------------------------------ scraper core ---------------------------------
