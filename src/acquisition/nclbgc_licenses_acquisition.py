@@ -8,17 +8,18 @@ Copyright © 2026 Wolfgang Sanyer
 Licensed under the Polyform Noncommercial License 1.0.0 (see LICENSE).
 """
 
-import pandas.api.types as ptypes
 import argparse
+import contextlib
 import re
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Tuple
 
 import pandas as pd
+import pandas.api.types as ptypes
+from playwright.sync_api import TimeoutError as PWTimeout
+from playwright.sync_api import sync_playwright
 from tqdm import tqdm
-from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 
 from vendorscope.columns import get_col_indices
 from vendorscope.text import normalize_name
@@ -50,12 +51,10 @@ def goto_search(page):
     page.context.set_default_timeout(10000)
     page.goto(SEARCH_URL, wait_until="domcontentloaded")
     # Try to close cookie banner if present
-    try:
-        page.get_by_role("button", name=re.compile("accept|agree|ok", re.I)).click(
+    with contextlib.suppress(Exception):
+        page.get_by_role("button", name=re.compile(r"accept|agree|ok", re.I)).click(
             timeout=3000
         )
-    except Exception:
-        pass
 
 
 def click_search(page):
@@ -101,10 +100,11 @@ def extract_row_account_text(row_locator) -> str:
         return ""
 
 
-def classify_accounts(page, company_name: str) -> Tuple[Optional[str], bool]:
+def classify_accounts(page, company_name: str) -> tuple[str | None, bool]:
     """
     Return (non_pending_license_text_or_None, pending_present_flag).
-    - If one or more non-pending accounts exist, return the first (e.g., 'L.27348'), pending flag may be True/False.
+    - If one or more non-pending accounts exist, return the first
+      (e.g., 'L.27348'); pending flag may be True/False.
     - If only pending exists, return None and pending_present=True.
     - If no rows at all, return (None, False).
     """
@@ -116,7 +116,7 @@ def classify_accounts(page, company_name: str) -> Tuple[Optional[str], bool]:
     owner_idx = header_index(page, "owner")
     q = (company_name or "").strip().lower()
 
-    non_pending: Optional[str] = None
+    non_pending: str | None = None
     pending_present = False
 
     # Prefer matching owner row first; otherwise evaluate all
@@ -199,7 +199,8 @@ def fill_for_name(
             for i in range(min(inputs.count(), 6)):
                 try:
                     el = inputs.nth(i)
-                    # prefer an empty field (the Company Name box is usually empty between searches)
+                    # prefer an empty field (the Company Name box is
+                    # usually empty between searches)
                     if not el.input_value():
                         el.fill(q, timeout=2000)
                         filled = True
@@ -290,7 +291,8 @@ def main():
         "--log-level",
         choices=["none", "warn", "all"],
         default="warn",
-        help="Console logging: none, warn (misses/pending), or all rows. Default: warn.",
+        help="Console logging: none, warn (misses/pending), or all rows. "
+        "Default: warn.",
     )
     ap.add_argument(
         "--reuse",
@@ -311,7 +313,8 @@ def main():
     )
     name_idx, lic_idx = get_col_indices(df, args.name_col, args.license_col)
 
-    # Ensure the license column can hold text but skip slow conversions if already string
+    # Ensure the license column can hold text but skip slow conversions
+    # if already string
     if not ptypes.is_string_dtype(df.iloc[:, lic_idx]):
         df.iloc[:, lic_idx] = df.iloc[:, lic_idx].astype(  # type: ignore
             "string"
@@ -385,9 +388,9 @@ def main():
             )  # type: ignore
 
             # Logging
-            if args.log_level == "all":
-                print(f'Row {i + 2}: "{name}" -> {result}')
-            elif args.log_level == "warn" and result in {"NA", "PENDING"}:
+            if args.log_level == "all" or (
+                args.log_level == "warn" and result in {"NA", "PENDING"}
+            ):
                 print(f'Row {i + 2}: "{name}" -> {result}')
 
             time.sleep(args.pause)

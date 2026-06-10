@@ -9,10 +9,11 @@ Licensed under the Polyform Noncommercial License 1.0.0 (see LICENSE).
 """
 
 import argparse
+import contextlib
+import pathlib
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from typing import List, Optional, Dict, Tuple
+from datetime import UTC, datetime
 
 import pandas as pd
 from selenium import webdriver
@@ -60,7 +61,7 @@ def parse_args() -> argparse.Namespace:
 
 # ------------------------------- utilities -----------------------------------
 def ts_utc() -> str:
-    return datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    return datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
 
 
 # ------------------------------ scraper core ---------------------------------
@@ -102,12 +103,10 @@ class NCLBGCDetailsScraper:
                 if tag == "detail_missing"
                 else f"debug_{tag}_{ts_utc()}"
             )
-            with open(f"{name}.html", "w", encoding="utf-8") as f:
+            with pathlib.Path(f"{name}.html").open("w", encoding="utf-8") as f:
                 f.write(self.driver.page_source)
-            try:
+            with contextlib.suppress(Exception):
                 self.driver.save_screenshot(f"{name}.png")
-            except Exception:
-                pass
             print(f"Wrote debug snapshot {name}.html")
         except Exception:
             pass
@@ -134,7 +133,8 @@ class NCLBGCDetailsScraper:
             (By.XPATH, "//input[@name='AccountNumber']"),
             (
                 By.XPATH,
-                "//input[contains(@placeholder,'License') or contains(@aria-label,'License')]",
+                "//input[contains(@placeholder,'License') "
+                "or contains(@aria-label,'License')]",
             ),
             (By.XPATH, "//label[contains(.,'License Number')]/following::input[1]"),
         ]
@@ -153,20 +153,16 @@ class NCLBGCDetailsScraper:
             self._dump_debug("input_missing")
             return False
 
-        try:
+        with contextlib.suppress(Exception):
             inp.clear()
-        except Exception:
-            pass
         inp.send_keys(lic)
         time.sleep(self.cfg.small_pause)
         # press Enter or click Search
         try:
             inp.send_keys(Keys.ENTER)
         except Exception:
-            try:
+            with contextlib.suppress(Exception):
                 self.driver.find_element(By.ID, "subBtn").click()
-            except Exception:
-                pass
 
         # Wait for results table containing an anchor with ShowAccountDetails
         try:
@@ -242,37 +238,34 @@ class NCLBGCDetailsScraper:
                 continue
         return ""
 
-    def _extract_qualifiers(self) -> Tuple[str, str, str]:
+    def _extract_qualifiers(self) -> tuple[str, str, str]:
         """
         Returns (Qualifier_Number, Qualifier_Name, Qualifier_Status).
         If multiple rows exist, each field returns '; ' separated values aligned by row.
         Robust even if _detail_context is None.
         """
-        q_nums: List[str] = []
-        q_names: List[str] = []
-        q_statuses: List[str] = []
+        q_nums: list[str] = []
+        q_names: list[str] = []
+        q_statuses: list[str] = []
 
         root = self._detail_context if self._detail_context is not None else self.driver
         try:
             # If we're on the page root, narrow to the dialog panel when present
-            try:
+            with contextlib.suppress(Exception):
                 root = root.find_element(By.ID, "dialog-form")
-            except Exception:
-                pass
 
             # Hint that qualifiers section/table exists (don't fail if timeout)
-            try:
+            with contextlib.suppress(TimeoutException):
                 WebDriverWait(self.driver, 5).until(
                     EC.presence_of_element_located(
                         (
                             By.XPATH,
-                            "//*[@id='dialog-form']//legend[normalize-space()='Qualifiers'] | "
+                            "//*[@id='dialog-form']//legend"
+                            "[normalize-space()='Qualifiers'] | "
                             "//*[@id='dialog-form']//th[contains(normalize-space(),'Qualifier')]",
                         )
                     )
                 )
-            except TimeoutException:
-                pass
 
             # Find qualifiers table using multiple fallbacks
             tables = root.find_elements(
@@ -301,13 +294,13 @@ class NCLBGCDetailsScraper:
 
         return "; ".join(q_nums), "; ".join(q_names), "; ".join(q_statuses)
 
-    def extract_license_details(self) -> Dict[str, str]:
+    def extract_license_details(self) -> dict[str, str]:
         if self._detail_context is None:
             print("Detail view not ready")
             self._dump_debug("detail_missing")
             return {"Error": "Detail context not found"}
 
-        details: Dict[str, str] = {}
+        details: dict[str, str] = {}
         try:
             # Contact
             details["Company_Name"] = self._get_field_by_label("Name")
@@ -357,28 +350,24 @@ class NCLBGCDetailsScraper:
 
         except Exception as e:
             print("Extraction error type " + e.__class__.__name__)
-            try:
+            with contextlib.suppress(Exception):
                 print("Extraction error repr " + repr(e))
-            except Exception:
-                pass
             self._dump_debug("extract_exception")
 
         return details
 
     def close(self) -> None:
-        try:
+        with contextlib.suppress(Exception):
             self.driver.quit()
-        except Exception:
-            pass
 
 
 # ------------------------------ main flow ------------------------------------
 def run_scrape(
     input_file: str,
-    sheet: Optional[str],
-    license_col: Optional[str],
+    sheet: str | None,
+    license_col: str | None,
     out_file: str,
-    limit: Optional[int],
+    limit: int | None,
     headless: bool,
     pause: float,
 ) -> None:
@@ -394,7 +383,7 @@ def run_scrape(
             "Could not find a license number column. Use --license-col to specify it."
         )
 
-    lic_list: List[str] = []
+    lic_list: list[str] = []
     for v in df[col].tolist():
         n = normalize_license(v)
         if n:
@@ -406,7 +395,7 @@ def run_scrape(
     cfg = ScraperConfig(headless=headless, small_pause=pause)
     scraper = NCLBGCDetailsScraper(cfg)
 
-    results: List[Dict[str, str]] = []
+    results: list[dict[str, str]] = []
     try:
         for idx, lic in enumerate(lic_list, 1):
             print(f"[{idx}/{len(lic_list)}] License {lic}")

@@ -88,8 +88,8 @@ def profile_dataframe(
 
     info = {
         "file": name,
-        "rows": int(len(df)),
-        "columns": int(len(df.columns)),
+        "rows": len(df),
+        "columns": len(df.columns),
     }
     if id_col and id_col in df.columns:
         info["unique_ids"] = int(df[id_col].nunique(dropna=True))

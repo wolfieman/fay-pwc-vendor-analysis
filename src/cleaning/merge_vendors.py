@@ -2,7 +2,8 @@
 """
 merge_vendors.py — Merge multiple vendor lists (HUB, master, PWC) into a single
 source-of-truth keyed on a canonicalized vendor name, with per-source presence flags.
-Writes a GitHub-safe sample + QA counts to --outdir (full SSOT optional via --full-xlsx).
+Writes a GitHub-safe sample + QA counts to --outdir (full SSOT optional via
+--full-xlsx).
 
 Copyright © 2026 Wolfgang Sanyer
 Licensed under the Polyform Noncommercial License 1.0.0 (see LICENSE).
@@ -53,7 +54,8 @@ def load_norm(path: Path, vendor_cols=("vendor_name", "vendor")):
 
 def main():
     ap = argparse.ArgumentParser(
-        description="Merge HUB, Master, PWC lists into a vendor SSOT (with source flags)."
+        description="Merge HUB, Master, PWC lists into a vendor SSOT "
+        "(with source flags)."
     )
     ap.add_argument("--hub", required=True)
     ap.add_argument("--master", required=True)

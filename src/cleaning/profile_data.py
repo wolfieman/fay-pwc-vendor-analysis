@@ -62,7 +62,7 @@ def main():
         all_summary = pd.concat(combined_rows, ignore_index=True)
         all_summary.to_csv(outdir / "pwc-profile-summary.csv", index=False)
 
-    with open(outdir / "pwc-profile-meta.json", "w", encoding="utf-8") as fh:
+    with Path(outdir / "pwc-profile-meta.json").open("w", encoding="utf-8") as fh:
         json.dump(meta, fh, indent=2)
 
     print(f"Profile written to: {outdir}")

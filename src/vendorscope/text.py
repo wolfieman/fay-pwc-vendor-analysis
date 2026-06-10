@@ -10,7 +10,10 @@ import re
 import pandas as pd
 
 # Legal-suffix tail stripped from a company name before matching (Inc, LLC, ...).
-SUFFIXES = r"(,?\s+(inc|inc\.|llc|l\.l\.c\.|ltd|ltd\.|co|co\.|corp|corp\.|company|contracting|contractors?))+$"
+SUFFIXES = (
+    r"(,?\s+(inc|inc\.|llc|l\.l\.c\.|ltd|ltd\.|co|co\.|corp|corp\.|company"
+    r"|contracting|contractors?))+$"
+)
 
 
 def snake(name: str) -> str:

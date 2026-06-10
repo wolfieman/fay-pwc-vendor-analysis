@@ -49,7 +49,7 @@ def test_profile_dataframe_summary_and_meta():
     assert info == {"file": "sample.csv", "rows": 2, "columns": 2}
     # a fully-missing column reports 100% missing
     assert summary.loc["b", "n_missing"] == 2
-    assert summary.loc["b", "pct_missing"] == 100.0
+    assert summary.loc["b", "pct_missing"] == pytest.approx(100.0)
 
 
 @pytest.mark.unit

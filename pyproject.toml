@@ -29,18 +29,23 @@ package = true
 
 [tool.ruff]
 line-length = 88
-target-version = "py311"
+target-version = "py314"
+src = ["src"]
 exclude = [".venv"]
 
 [tool.ruff.lint]
-# Replicate ruff's default select (E4, E7, E9, F) so this config introduces no new
-# diagnostics on these scripts, plus CPY (flake8-copyright) to enforce the required
-# authorship/license banner. The broader "E" (E501 line-length, E2 whitespace), W,
-# and I (isort) are intentionally NOT added: these scripts have long lines and
-# unsorted imports that those selects would flag, which is out of scope here.
+# Broad data/research tier (orchestrator standards/python/tooling.md): the fuller
+# ruleset for a data-heavy analysis repo (bugbear B, simplify SIM, use-pathlib PTH,
+# ruff-specific RUF, pyupgrade UP, isort I), plus CPY for the license banner.
 # CPY001 is a preview rule, so lint.preview is enabled (scoped to lint only).
 preview = true
-select = ["E4", "E7", "E9", "F", "CPY"]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "PTH", "RUF", "CPY"]
+# en-dash and multiplication-sign are intentional typography; whitelist them so
+# RUF001-003 still flag unexpected confusables.
+allowed-confusables = ["–", "×"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["vendorscope"]
 
 [tool.ruff.lint.flake8-copyright]
 # Match our exact banner copyright line (literal TOML string: no backslash escaping).

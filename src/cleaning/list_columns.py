@@ -5,7 +5,7 @@ list_columns.py — Print and optionally save column names from an Excel or CSV 
 Reads from data/raw by default; saves column lists to data/processed with --save.
 
 Usage:
-  python src/cleaning/list_columns.py                          # default vendor-details-evp-nc.xlsx
+  python src/cleaning/list_columns.py   # default: vendor-details-evp-nc.xlsx
   python src/cleaning/list_columns.py nclbgc-license-details.xlsx
   python src/cleaning/list_columns.py some.xlsx --sheet 0 --save
   python src/cleaning/list_columns.py some.xlsx --list-sheets
@@ -16,8 +16,9 @@ Licensed under the Polyform Noncommercial License 1.0.0 (see LICENSE).
 """
 
 import argparse
-from pathlib import Path
 import sys
+from pathlib import Path
+
 import pandas as pd
 
 # Default locations (relative to repo root)
@@ -71,7 +72,7 @@ def load_columns(path: Path, sheet=None):
         else:
             try:
                 sheet_arg = int(sheet)
-            except (TypeError, ValueError):
+            except TypeError, ValueError:
                 sheet_arg = sheet
             df = pd.read_excel(path, sheet_name=sheet_arg, nrows=0)
     elif suffix == ".csv":
@@ -120,7 +121,7 @@ def main():
         outdir = Path(args.outdir)
         outdir.mkdir(parents=True, exist_ok=True)
         out = outdir / f"{path.stem}-columns.txt"
-        with open(out, "w", encoding="utf-8") as f:
+        with Path(out).open("w", encoding="utf-8") as f:
             for c in cols:
                 f.write(f"{c}\n")
         print(f"\n💾 Saved column list to: {out}")
