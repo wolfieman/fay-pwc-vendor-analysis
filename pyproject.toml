@@ -1,9 +1,9 @@
 [project]
-name = "pwc-vendor-analysis"
+name = "vendorscope"
 version = "0.1.0"
-description = "Vendor availability & licensing data-quality analysis for the Fayetteville Public Works Commission (PWC)."
+description = "VendorScope: vendor readiness & availability analytics. Turns public vendor and licensing data into an audited, decision-ready view of supplier availability and procurement readiness."
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.14"
 license = { file = "LICENSE" }
 authors = [{ name = "Wolfgang Sanyer", email = "wolfgang.sanyer@gmail.com" }]
 dependencies = [
@@ -15,26 +15,58 @@ dependencies = [
     "webdriver-manager>=4.0",
 ]
 
-# This repo is an analysis project, not an installable library:
-# uv manages dependencies but does not build/install the project itself.
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# Only the pure-core package ships in the wheel; the acquisition/cleaning
+# scripts are run by file path, not imported as part of a distribution.
+[tool.hatch.build.targets.wheel]
+packages = ["src/vendorscope"]
+
 [tool.uv]
-package = false
+package = true
 
 [tool.ruff]
 line-length = 88
-target-version = "py311"
+target-version = "py314"
+src = ["src"]
 exclude = [".venv"]
 
 [tool.ruff.lint]
-# Replicate ruff's default select (E4, E7, E9, F) so this config introduces no new
-# diagnostics on these scripts, plus CPY (flake8-copyright) to enforce the required
-# authorship/license banner. The broader "E" (E501 line-length, E2 whitespace), W,
-# and I (isort) are intentionally NOT added: these scripts have long lines and
-# unsorted imports that those selects would flag, which is out of scope here.
+# Broad data/research tier (orchestrator standards/python/tooling.md): the fuller
+# ruleset for a data-heavy analysis repo (bugbear B, simplify SIM, use-pathlib PTH,
+# ruff-specific RUF, pyupgrade UP, isort I), plus CPY for the license banner.
 # CPY001 is a preview rule, so lint.preview is enabled (scoped to lint only).
 preview = true
-select = ["E4", "E7", "E9", "F", "CPY"]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "PTH", "RUF", "CPY"]
+# en-dash and multiplication-sign are intentional typography; whitelist them so
+# RUF001-003 still flag unexpected confusables.
+allowed-confusables = ["–", "×"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["vendorscope"]
 
 [tool.ruff.lint.flake8-copyright]
 # Match our exact banner copyright line (literal TOML string: no backslash escaping).
 notice-rgx = '(?i)Copyright\s+©\s+\d{4}\s+Wolfgang Sanyer'
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.15.16",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = ["-v", "--strict-markers", "--tb=short", "-ra"]
+markers = [
+    "unit: Unit tests for pure functions and business logic",
+    "contract: Contract tests that verify external API assumptions",
+    "integration: End-to-end tests that call a live API",
+]
+minversion = "7.0"

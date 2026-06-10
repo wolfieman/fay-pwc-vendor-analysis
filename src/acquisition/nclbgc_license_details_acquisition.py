@@ -9,15 +9,20 @@ Licensed under the Polyform Noncommercial License 1.0.0 (see LICENSE).
 """
 
 import argparse
-import re
+import contextlib
+import logging
+import pathlib
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from typing import List, Optional, Dict, Tuple
+from datetime import UTC, datetime
 
 import pandas as pd
 from selenium import webdriver
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import (
+    NoSuchElementException,
+    TimeoutException,
+    WebDriverException,
+)
 from selenium.webdriver import Chrome
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
@@ -27,62 +32,48 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
 
+from vendorscope.columns import autodetect_license_column
+from vendorscope.text import normalize_license
+
+logger = logging.getLogger("vendorscope.acquisition.license_details")
+
+# Chrome window and timeouts.
+WINDOW_SIZE = "1400,1000"
+PAGE_LOAD_TIMEOUT_SECONDS = 45
+QUALIFIER_WAIT_SECONDS = 5
+
 
 # --------------------------- configuration & CLI ------------------------------
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="NCLBGC license details scraper")
     p.add_argument("--input", required=True, help="Input Excel file")
     p.add_argument("--sheet", default=None, help="Sheet name (optional)")
-    p.add_argument("--license-col", default=None,
-                   help="Column name with license numbers (auto-detects if omitted)")
-    p.add_argument("--out", default="data/raw/nclbgc-license-details.xlsx",
-                   help="Output Excel file")
-    p.add_argument("--limit", type=int, default=None,
-                   help="Limit number of licenses to process (for quick tests)")
-    p.add_argument("--headless", action="store_true",
-                   help="Run Chrome headless")
-    p.add_argument("--pause", type=float, default=0.25,
-                   help="Short sleep between actions (sec)")
+    p.add_argument(
+        "--license-col",
+        default=None,
+        help="Column name with license numbers (auto-detects if omitted)",
+    )
+    p.add_argument(
+        "--out",
+        default="data/raw/nclbgc-license-details.xlsx",
+        help="Output Excel file",
+    )
+    p.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Limit number of licenses to process (for quick tests)",
+    )
+    p.add_argument("--headless", action="store_true", help="Run Chrome headless")
+    p.add_argument(
+        "--pause", type=float, default=0.25, help="Short sleep between actions (sec)"
+    )
     return p.parse_args()
 
 
 # ------------------------------- utilities -----------------------------------
 def ts_utc() -> str:
-    return datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-
-
-def normalize_license(v) -> Optional[str]:
-    """Coerce Excel/Pandas values to a clean license string (e.g., 85168.0 -> '85168')."""
-    if v is None:
-        return None
-    if isinstance(v, int):
-        return str(v)
-    if isinstance(v, float):
-        if v.is_integer():
-            return str(int(v))
-        s = f"{v}".strip()
-        m = re.match(r"^\s*(\d+)\.(\d+)\s*$", s)
-        return (m.group(1) + m.group(2)) if m else re.sub(r"\D", "", s) or None
-    s = str(v).strip()
-    m = re.match(r"^\s*(\d+)(?:\.0+)?\s*$", s)
-    if m:
-        return m.group(1)
-    digits = re.sub(r"\D", "", s)
-    return digits or None
-
-
-def autodetect_license_column(df: pd.DataFrame) -> Optional[str]:
-    candidates = [
-        "License_Number", "LICENSE_NUMBER", "LICENSE", "LICENSE #", "License #",
-        "LicenseNumber", "License No", "LicenseNo", "AccountNumber", "Account Number"
-    ]
-    for c in candidates:
-        if c in df.columns:
-            return c
-    for c in df.columns:
-        if re.search(r"license|account", c, re.I):
-            return c
-    return None
+    return datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
 
 
 # ------------------------------ scraper core ---------------------------------
@@ -110,23 +101,25 @@ class NCLBGCDetailsScraper:
         opts.add_argument("--disable-blink-features=AutomationControlled")
         opts.add_experimental_option("excludeSwitches", ["enable-automation"])
         opts.add_experimental_option("useAutomationExtension", False)
-        opts.add_argument("--window-size=1400,1000")
+        opts.add_argument(f"--window-size={WINDOW_SIZE}")
         service = Service(ChromeDriverManager().install())
         drv = webdriver.Chrome(service=service, options=opts)
-        drv.set_page_load_timeout(45)
+        drv.set_page_load_timeout(PAGE_LOAD_TIMEOUT_SECONDS)
         return drv
 
     # ------------------------ debug helpers -------------------------
     def _dump_debug(self, tag: str) -> None:
         try:
-            name = f"debug_detail_missing_{ts_utc()}" if tag == "detail_missing" else f"debug_{tag}_{ts_utc()}"
-            with open(f"{name}.html", "w", encoding="utf-8") as f:
+            name = (
+                f"debug_detail_missing_{ts_utc()}"
+                if tag == "detail_missing"
+                else f"debug_{tag}_{ts_utc()}"
+            )
+            with pathlib.Path(f"{name}.html").open("w", encoding="utf-8") as f:
                 f.write(self.driver.page_source)
-            try:
+            with contextlib.suppress(WebDriverException):
                 self.driver.save_screenshot(f"{name}.png")
-            except Exception:
-                pass
-            print(f"Wrote debug snapshot {name}.html")
+            logger.info("Wrote debug snapshot %s.html", name)
         except Exception:
             pass
 
@@ -142,7 +135,7 @@ class NCLBGCDetailsScraper:
                 if self.driver.find_elements(By.ID, "AccountNumber"):
                     return
                 self.driver.switch_to.default_content()
-        except Exception:
+        except WebDriverException:
             pass
 
     def _find_search_input(self):
@@ -150,15 +143,17 @@ class NCLBGCDetailsScraper:
             (By.ID, "AccountNumber"),
             (By.ID, "LicenseNumber"),
             (By.XPATH, "//input[@name='AccountNumber']"),
-            (By.XPATH,
-             "//input[contains(@placeholder,'License') or contains(@aria-label,'License')]"),
-            (By.XPATH,
-             "//label[contains(.,'License Number')]/following::input[1]"),
+            (
+                By.XPATH,
+                "//input[contains(@placeholder,'License') "
+                "or contains(@aria-label,'License')]",
+            ),
+            (By.XPATH, "//label[contains(.,'License Number')]/following::input[1]"),
         ]
         for by, sel in selectors:
             try:
                 return self.driver.find_element(by, sel)
-            except Exception:
+            except NoSuchElementException:
                 continue
         return None
 
@@ -166,40 +161,48 @@ class NCLBGCDetailsScraper:
         self.open_search()
         inp = self._find_search_input()
         if not inp:
-            print("⚠️  Could not find search input.")
+            logger.warning("⚠️  Could not find search input.")
             self._dump_debug("input_missing")
             return False
+        self._submit_search(inp, lic)
+        if not self._wait_results_table():
+            return False
+        if not self._click_detail_row(lic):
+            return False
+        return self._await_detail_dialog()
 
-        try:
+    def _submit_search(self, inp, lic: str) -> None:
+        """Type the license number into the search box and submit it."""
+        with contextlib.suppress(WebDriverException):
             inp.clear()
-        except Exception:
-            pass
         inp.send_keys(lic)
         time.sleep(self.cfg.small_pause)
         # press Enter or click Search
         try:
             inp.send_keys(Keys.ENTER)
-        except Exception:
-            try:
+        except WebDriverException:
+            with contextlib.suppress(WebDriverException):
                 self.driver.find_element(By.ID, "subBtn").click()
-            except Exception:
-                pass
 
-        # Wait for results table containing an anchor with ShowAccountDetails
+    def _wait_results_table(self) -> bool:
+        """Wait for the results table to load; return False on timeout."""
         try:
             self.wait.until(
                 EC.presence_of_element_located(
-                    (By.XPATH,
-                     "//table[@id='AccountSearchTable']//a[contains(@onclick,'ShowAccountDetails')]")
+                    (
+                        By.XPATH,
+                        "//table[@id='AccountSearchTable']//a[contains(@onclick,'ShowAccountDetails')]",
+                    )
                 )
             )
+            return True
         except TimeoutException:
-            print("⚠️  Search results did not load.")
+            logger.warning("⚠️  Search results did not load.")
             self._dump_debug("search_timeout")
             return False
 
-        # Click the result anchor matching the license (prefer exact "L.<lic>")
-        clicked = False
+    def _click_detail_row(self, lic: str) -> bool:
+        """Click the result anchor matching the license (prefer exact 'L.<lic>')."""
         xpaths = [
             f"//table[@id='AccountSearchTable']//a[normalize-space()=concat('L.','{lic}')]",
             f"//table[@id='AccountSearchTable']//a[contains(normalize-space(),'{lic}')]",
@@ -207,34 +210,31 @@ class NCLBGCDetailsScraper:
         ]
         for xp in xpaths:
             try:
-                link = self.wait.until(
-                    EC.element_to_be_clickable((By.XPATH, xp)))
+                link = self.wait.until(EC.element_to_be_clickable((By.XPATH, xp)))
                 link.click()
-                clicked = True
-                break
-            except Exception:
+                return True
+            except TimeoutException, WebDriverException:
                 continue
+        logger.warning("⚠️  Could not click into detail view.")
+        self._dump_debug("click_detail_failed")
+        return False
 
-        if not clicked:
-            print("⚠️  Could not click into detail view.")
-            self._dump_debug("click_detail_failed")
-            return False
-
-        # Wait for the inline dialog to be visible and populated via AJAX
+    def _await_detail_dialog(self) -> bool:
+        """Wait for the inline detail dialog to load via AJAX; cache its context."""
         try:
-            self.wait.until(EC.visibility_of_element_located(
-                (By.ID, "dialog-form")))
+            self.wait.until(EC.visibility_of_element_located((By.ID, "dialog-form")))
             self.wait.until(
                 EC.presence_of_element_located(
-                    (By.XPATH,
-                     "//*[@id='dialog-details']//*[contains(@class,'display-label')]")
+                    (
+                        By.XPATH,
+                        "//*[@id='dialog-details']//*[contains(@class,'display-label')]",
+                    )
                 )
             )
-            self._detail_context = self.driver.find_element(
-                By.ID, "dialog-form")
+            self._detail_context = self.driver.find_element(By.ID, "dialog-form")
             return True
         except TimeoutException:
-            print("Detail view did not show expected elements")
+            logger.warning("Detail view did not show expected elements")
             self._dump_debug("detail_missing")
             return False
 
@@ -254,41 +254,38 @@ class NCLBGCDetailsScraper:
             try:
                 el = root.find_element(By.XPATH, xp)
                 return el.text.strip()
-            except Exception:
+            except NoSuchElementException:
                 continue
         return ""
 
-    def _extract_qualifiers(self) -> Tuple[str, str, str]:
+    def _extract_qualifiers(self) -> tuple[str, str, str]:
         """
         Returns (Qualifier_Number, Qualifier_Name, Qualifier_Status).
         If multiple rows exist, each field returns '; ' separated values aligned by row.
         Robust even if _detail_context is None.
         """
-        q_nums: List[str] = []
-        q_names: List[str] = []
-        q_statuses: List[str] = []
+        q_nums: list[str] = []
+        q_names: list[str] = []
+        q_statuses: list[str] = []
 
         root = self._detail_context if self._detail_context is not None else self.driver
         try:
             # If we're on the page root, narrow to the dialog panel when present
-            try:
+            with contextlib.suppress(NoSuchElementException):
                 root = root.find_element(By.ID, "dialog-form")
-            except Exception:
-                pass
 
             # Hint that qualifiers section/table exists (don't fail if timeout)
-            try:
-                WebDriverWait(self.driver, 5).until(
+            with contextlib.suppress(TimeoutException):
+                WebDriverWait(self.driver, QUALIFIER_WAIT_SECONDS).until(
                     EC.presence_of_element_located(
                         (
                             By.XPATH,
-                            "//*[@id='dialog-form']//legend[normalize-space()='Qualifiers'] | "
+                            "//*[@id='dialog-form']//legend"
+                            "[normalize-space()='Qualifiers'] | "
                             "//*[@id='dialog-form']//th[contains(normalize-space(),'Qualifier')]",
                         )
                     )
                 )
-            except TimeoutException:
-                pass
 
             # Find qualifiers table using multiple fallbacks
             tables = root.find_elements(
@@ -304,29 +301,26 @@ class NCLBGCDetailsScraper:
             for r in rows:
                 tds = r.find_elements(By.XPATH, ".//td")
                 # Expected order: Name | Qualifier # | Status (defensive indexing)
-                name = (tds[0].text if len(tds) >
-                        0 else "").strip().replace("\n", " ")
-                qnum = (tds[1].text if len(tds) >
-                        1 else "").strip().replace("\n", " ")
-                stat = (tds[2].text if len(tds) >
-                        2 else "").strip().replace("\n", " ")
+                name = (tds[0].text if len(tds) > 0 else "").strip().replace("\n", " ")
+                qnum = (tds[1].text if len(tds) > 1 else "").strip().replace("\n", " ")
+                stat = (tds[2].text if len(tds) > 2 else "").strip().replace("\n", " ")
                 if name or qnum or stat:
                     q_names.append(name)
                     q_nums.append(qnum)
                     q_statuses.append(stat)
 
-        except Exception:
+        except WebDriverException:
             return "", "", ""
 
         return "; ".join(q_nums), "; ".join(q_names), "; ".join(q_statuses)
 
-    def extract_license_details(self) -> Dict[str, str]:
+    def extract_license_details(self) -> dict[str, str]:
         if self._detail_context is None:
-            print("Detail view not ready")
+            logger.warning("Detail view not ready")
             self._dump_debug("detail_missing")
             return {"Error": "Detail context not found"}
 
-        details: Dict[str, str] = {}
+        details: dict[str, str] = {}
         try:
             # Contact
             details["Company_Name"] = self._get_field_by_label("Name")
@@ -334,20 +328,18 @@ class NCLBGCDetailsScraper:
             details["Phone"] = self._get_field_by_label("Phone")
 
             # License
-            details["License_Display"] = (
-                self._get_field_by_label(
-                    "License #") or self._get_field_by_label("License Number")
-            )
+            details["License_Display"] = self._get_field_by_label(
+                "License #"
+            ) or self._get_field_by_label("License Number")
             details["Account_Type"] = self._get_field_by_label("Account Type")
-            details["Issue_Date"] = (
-                self._get_field_by_label(
-                    "First Issued Date") or self._get_field_by_label("Issued Date")
-            )
-            details["Expiration_Date"] = self._get_field_by_label(
-                "Expiration Date")
+            details["Issue_Date"] = self._get_field_by_label(
+                "First Issued Date"
+            ) or self._get_field_by_label("Issued Date")
+            details["Expiration_Date"] = self._get_field_by_label("Expiration Date")
             details["Status"] = self._get_field_by_label("Status")
             details["License_Limitation"] = self._get_field_by_label(
-                "License Limitation")
+                "License Limitation"
+            )
 
             # Active Classifications
             classes_text = ""
@@ -358,7 +350,7 @@ class NCLBGCDetailsScraper:
                     "//*[contains(@class,'display-field')][1]",
                 )
                 classes_text = node.text.strip().replace("\n", "; ")
-            except Exception:
+            except NoSuchElementException:
                 try:
                     node = self._detail_context.find_element(
                         By.XPATH,
@@ -366,7 +358,7 @@ class NCLBGCDetailsScraper:
                         "[contains(@class,'display-field')][1]",
                     )
                     classes_text = node.text.strip().replace("\n", "; ")
-                except Exception:
+                except NoSuchElementException:
                     classes_text = ""
             details["Classifications"] = classes_text
 
@@ -377,53 +369,61 @@ class NCLBGCDetailsScraper:
             details["Qualifier_Status"] = qstat
 
         except Exception as e:
-            print("Extraction error type " + e.__class__.__name__)
-            try:
-                print("Extraction error repr " + repr(e))
-            except Exception:
-                pass
+            logger.warning("Extraction error type %s", e.__class__.__name__)
+            with contextlib.suppress(Exception):
+                logger.warning("Extraction error repr %r", e)
             self._dump_debug("extract_exception")
 
         return details
 
     def close(self) -> None:
-        try:
+        with contextlib.suppress(WebDriverException):
             self.driver.quit()
-        except Exception:
-            pass
 
 
 # ------------------------------ main flow ------------------------------------
-def run_scrape(input_file: str, sheet: Optional[str], license_col: Optional[str],
-               out_file: str, limit: Optional[int], headless: bool, pause: float) -> None:
-    print(f"Loading {input_file}")
-    df = pd.read_excel(
-        input_file, sheet_name=sheet) if sheet else pd.read_excel(input_file)
+def run_scrape(
+    input_file: str,
+    sheet: str | None,
+    license_col: str | None,
+    out_file: str,
+    limit: int | None,
+    headless: bool,
+    pause: float,
+) -> None:
+    logger.info("Loading %s", input_file)
+    df = (
+        pd.read_excel(input_file, sheet_name=sheet)
+        if sheet
+        else pd.read_excel(input_file)
+    )
     col = license_col or autodetect_license_column(df)
     if not col:
         raise RuntimeError(
-            "Could not find a license number column. Use --license-col to specify it.")
+            "Could not find a license number column. Use --license-col to specify it."
+        )
 
-    lic_list: List[str] = []
+    lic_list: list[str] = []
     for v in df[col].tolist():
         n = normalize_license(v)
         if n:
             lic_list.append(n)
     if limit:
         lic_list = lic_list[:limit]
-    print(f"Processing {len(lic_list)} licenses")
+    logger.info("Processing %d licenses", len(lic_list))
 
     cfg = ScraperConfig(headless=headless, small_pause=pause)
     scraper = NCLBGCDetailsScraper(cfg)
 
-    results: List[Dict[str, str]] = []
+    results: list[dict[str, str]] = []
     try:
         for idx, lic in enumerate(lic_list, 1):
-            print(f"[{idx}/{len(lic_list)}] License {lic}")
-            print(f"Searching for license {lic}")
+            logger.info("[%d/%d] License %s", idx, len(lic_list), lic)
+            logger.info("Searching for license %s", lic)
             if not scraper.search_license(lic):
                 results.append(
-                    {"License_Number": lic, "Error": "Search or click failed"})
+                    {"License_Number": lic, "Error": "Search or click failed"}
+                )
                 continue
 
             details = scraper.extract_license_details()
@@ -438,24 +438,43 @@ def run_scrape(input_file: str, sheet: Optional[str], license_col: Optional[str]
 
     # Desired column order (L: Qualifier_Number, M: Qualifier_Name, N: Qualifier_Status)
     ordered = [
-        "License_Number", "Company_Name", "Full_Address", "Phone",
-        "License_Display", "Account_Type", "Issue_Date", "Expiration_Date",
-        "Status", "License_Limitation", "Classifications",
-        "Qualifier_Number", "Qualifier_Name", "Qualifier_Status",
+        "License_Number",
+        "Company_Name",
+        "Full_Address",
+        "Phone",
+        "License_Display",
+        "Account_Type",
+        "Issue_Date",
+        "Expiration_Date",
+        "Status",
+        "License_Limitation",
+        "Classifications",
+        "Qualifier_Number",
+        "Qualifier_Name",
+        "Qualifier_Status",
     ]
-    cols = [c for c in ordered if c in out.columns] + \
-        [c for c in out.columns if c not in ordered]
+    cols = [c for c in ordered if c in out.columns] + [
+        c for c in out.columns if c not in ordered
+    ]
     out = out[cols]
 
     out.to_excel(out_file, index=False)
-    print(f"Saved: {out_file}")
-    print(f"Records: {len(out)}")
+    logger.info("Saved: %s", out_file)
+    logger.info("Records: %d", len(out))
 
 
 def main():
     args = parse_args()
-    run_scrape(args.input, args.sheet, args.license_col, args.out,
-               args.limit, args.headless, args.pause)
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    run_scrape(
+        args.input,
+        args.sheet,
+        args.license_col,
+        args.out,
+        args.limit,
+        args.headless,
+        args.pause,
+    )
 
 
 if __name__ == "__main__":
