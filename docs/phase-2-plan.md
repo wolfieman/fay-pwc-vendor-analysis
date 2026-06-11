@@ -44,11 +44,23 @@ the 44-column vendor master, including each vendor's license number.
 Stage 1 into the board search, which returns one license at a time; iterate over all
 valid licenses to pull the 12-column details.
 
-**API-first:** before committing to browser automation, probe both sites for an
-official or XHR/JSON endpoint behind the search. An HTTP API is far more robust than
-driving a headless browser to an export button. Browser automation (Playwright,
-headless, pinned container) is the fallback only where no API exists. eVP requires no
-login (fully public), which makes either approach feasible.
+**API-first — probed and confirmed (2026-06-10):**
+
+- **NCLBGC = full HTTP API, no browser, no token.** `POST https://portal.nclbgc.org/Public/_Search/`
+  (`application/x-www-form-urlencoded`, `x-requested-with: XMLHttpRequest`, no anti-forgery
+  token) takes named form fields (`CompanyName`, `AccountNumber`, `ClassificationDefinitionIdnt`,
+  …) and returns the results **table HTML**. Each row carries an opaque `key`; detail/qualifiers
+  via `GET /Public/_ShowAccountDetails/?key=<k>&Source=Search`, `/_ShowAccountQualifiers/?key=<k>`.
+  ⇒ Replace Playwright/Selenium with **`httpx` + HTML-fragment parsing** (keep one session cookie).
+- **eVP = JSON API, token-bound + tamper-proofed ⇒ API-assisted headless browser.** Rows come
+  from `POST https://evp.nc.gov/_services/entity-subgrid-data.json/<gridId>` → `application/json`,
+  requiring an `__RequestVerificationToken` header and an opaque, server-signed
+  `base64SecureConfiguration` body (the filter is encrypted into it; the advanced search is an
+  ASP.NET WebForms `__VIEWSTATE` postback). ⇒ Drive the filtered results page in **headless
+  Playwright and harvest the `entity-subgrid-data.json` JSON responses while paging** — capture
+  the JSON, don't reverse the blob. Pinned container is needed for eVP only.
+
+Net: NCLBGC drops the browser entirely; eVP stays browser-driven but yields clean JSON.
 
 ## Database schema (normalized, ~3NF)
 
@@ -85,12 +97,16 @@ Run as sequenced sub-passes with a go/no-go gate between each (not one mega-PR).
   automated access. Probe both sites for APIs (API-first). Lock the PII/mosaic design
   stance (which fields the DB exposes vs. the eventual P3 public index).
   *Gate: terms confirmed + acquisition approach (API vs browser) chosen per source.*
-- **P2.1 — Scraper hardening + offline parsing tests.** Split DOM/response parsing out
-  of the driver objects into pure functions; capture saved fixtures (HTML or API JSON)
-  -> contract-tier tests that run deterministically in CI. Re-validate + optimize the
-  existing NCLBGC scripts vs the live site. **Build Stage-1 eVP acquisition** to
-  reproduce PWC's filters.
-  *Gate: offline tests green in CI; live re-validation passes; eVP export reproducible.*
+- **P2.1 — Scraper hardening + offline parsing tests (test-first).** Build the NCLBGC
+  `httpx` client + pure HTML-fragment parsers; build Stage-1 eVP acquisition (headless JSON
+  harvest) to reproduce PWC's filters. Pure parsers are covered by **offline contract tests over
+  saved fixtures** (HTML for NCLBGC, JSON for eVP) that run deterministically in default CI.
+  Live validation is **opt-in integration tests** — extend `tests/test_scrapers_integration.py`
+  (`@pytest.mark.integration`, gated by `TEST_MODE`; skipped by default, run with
+  `TEST_MODE=false uv run pytest -m integration`), the documented pattern already established for
+  the Part-1 canary. (The one-off `scripts/probe_endpoints.py` used for endpoint discovery has
+  served its purpose and is removed; its checks become integration tests.)
+  *Gate: offline contract tests green in CI; live integration tests pass against both sources.*
 - **P2.2 — Own database.** Implement the schema above; a `vendorscope.db` loader inserts
   the cleaned frames; reproducible build from saved raw snapshots.
   *Gate: rebuild from the saved `v##` snapshots reproduces the current cleaned dataset
