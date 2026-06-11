@@ -117,6 +117,33 @@ License status: **263 active**, 23 invalid, 9 archived. *\*Among the 18 vendors 
 └─ uv.lock              # pinned, reproducible environment
 ```
 
+## Database (Phase 2)
+
+Phase 2 turns the flat-file pipeline into a maintained data product: a **single SQLite
+file** holding the normalized relational tables *and* the embedding vectors (via
+[`sqlite-vec`](https://github.com/asg017/sqlite-vec)). STRICT tables, enforced foreign
+keys, `CHECK`-constraint vocabularies, and PII quarantined into `*_pii` sibling tables so
+the public export is PII-free by construction. Full reference + design rationale:
+[`docs/database-schema.md`](docs/database-schema.md); the canonical DDL is
+[`src/vendorscope/db/schema.py`](src/vendorscope/db/schema.py).
+
+```mermaid
+erDiagram
+    source ||--o{ acquisition_run : "scraped in"
+    acquisition_run ||--o{ vendor : stamps
+    acquisition_run ||--o{ license : stamps
+    license ||--|| license_pii : "PII"
+    license ||--o{ qualifier : has
+    qualifier ||--|| qualifier_pii : "PII"
+    license ||--o{ license_classification : ""
+    classification ||--o{ license_classification : ""
+    license |o--o{ vendor : "GC license of"
+    vendor ||--|| vendor_pii : "PII"
+    vendor ||--o{ vendor_trade : holds
+    vendor ||--o{ vendor_certification : carries
+    vendor ||--o| vendor_embedding : "vector (P2.3)"
+```
+
 ## Reproduce
 
 The repo ships an anonymized sample in `data/sample/` (PII removed), so the pipeline runs out of the box. One command runs the full clean, profile, and audit chain (no scraping):

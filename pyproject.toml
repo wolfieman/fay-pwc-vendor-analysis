@@ -15,6 +15,7 @@ dependencies = [
     "webdriver-manager>=4.0",
     "beautifulsoup4>=4.15.0",
     "httpx>=0.28.1",
+    "sqlite-vec==0.1.9",
 ]
 
 [build-system]
@@ -52,6 +53,13 @@ known-first-party = ["vendorscope"]
 [tool.ruff.lint.flake8-copyright]
 # Match our exact banner copyright line (literal TOML string: no backslash escaping).
 notice-rgx = '(?i)Copyright\s+©\s+\d{4}\s+Wolfgang Sanyer'
+
+[tool.ruff.lint.per-file-ignores]
+# These files embed SQL (the database DDL as a string constant, and SQL
+# statements in the schema tests). Wrapping SQL at the 88-column Python limit
+# harms its readability and alignment, so E501 is waived for them only.
+"src/vendorscope/db/schema.py" = ["E501"]
+"tests/test_db_schema.py" = ["E501"]
 
 [dependency-groups]
 dev = [
