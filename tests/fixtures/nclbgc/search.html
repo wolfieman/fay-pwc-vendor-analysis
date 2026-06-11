@@ -1,0 +1,102 @@
+
+
+
+
+    <fieldset>
+
+        <legend>Search Results</legend>
+
+        <div class="ui-widget">
+
+
+
+            <table id="AccountSearchTable" class="display responsive nowrap" cellspacing="0" style="width:100%">
+
+                <thead>
+
+                    <tr>
+
+                        <th>Account #</th>
+
+                        <th>Type</th>
+
+                        
+
+                        <th>Owner</th>
+
+                    </tr>
+
+                </thead>
+
+
+
+                <tbody>
+
+                            <tr>
+
+                                <td>
+
+                                        <a onclick="ShowAccountDetails( 'JTeHh5hHBoEZqYLA9I%2b%2bZw%3d%3d' );" title="View Account Details" href="#void">L.85168</a>
+
+                                </td>
+
+                                <td style="">License</td>
+
+                                
+
+                                <td>
+
+                                    24North Investments LLC
+
+                                </td>
+
+                            </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </fieldset>
+
+        <script>
+
+
+
+                $(document).ready(function () {
+
+
+
+                    //$.fn.bootstrapBtn = $.fn.button.noConflict();
+
+
+
+                    var dataTable = $('#AccountSearchTable').DataTable({
+
+                        "order": [],
+
+                        responsive: false,
+
+                        "pageLength": 10,
+
+                        "drawCallback": function(settings) {
+
+                            $('html, body').animate({
+
+                                scrollTop: $(this).offset().top
+
+                            }, 500);
+
+                        }
+
+                    })
+
+
+
+                });
+
+
+
+        </script>
+

@@ -20,6 +20,8 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
+from vendorscope.nclbgc_client import NCLBGCClient
+
 _OFFLINE = os.environ.get("TEST_MODE", "true").lower() != "false"
 pytestmark = pytest.mark.skipif(
     _OFFLINE, reason="live site; set TEST_MODE=false to run"
@@ -79,3 +81,16 @@ def test_details_scraper_extracts_known_company(tmp_path):
     result = pd.read_excel(out)
     assert result.iloc[0]["Company_Name"] == KNOWN_COMPANY
     assert "Error" not in result.columns
+
+
+@pytest.mark.integration
+def test_nclbgc_client_finds_known_license_via_http():
+    """The browserless httpx client reaches parity with the scraper canary."""
+    with NCLBGCClient() as client:
+        record = client.license_record(KNOWN_COMPANY)
+    assert record is not None
+    assert record["license_number"] == f"L.{KNOWN_LICENSE}"
+    detail = record["detail"]
+    assert detail["company_name"] == KNOWN_COMPANY
+    assert detail["status"]
+    assert record["qualifiers"]
