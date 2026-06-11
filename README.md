@@ -18,6 +18,7 @@ but the vendor data was incomplete and unverified. I assembled the data from two
 built a documented cleaning-and-audit pipeline, and produced descriptive analytics across **295 vendors**.
 
 **Headline results:**
+
 - **65.4%** of vendors (193 of 295) had **missing HUB (Historically Underutilized Business) status**, the single biggest data-quality gap.
 - Of vendors with known status, **80 are HUB-certified** and **22 are explicitly not certified**.
 - **Recommendation:** prioritize outreach to the **22 non-HUB-certified vendors** for economic-inclusion conversations, and close the HUB-status gap at vendor intake.
@@ -49,7 +50,7 @@ schema in [`data/DATA_DICTIONARY.md`](data/DATA_DICTIONARY.md):
 
 ## Methodology
 
-```
+```text
 Acquisition  →  Cleaning  →  Profiling  →  Audit  →  Descriptive analytics
 (Selenium /     (protocol     (per-column   (missingness   (HUB, licensing,
  Playwright)     standardize)   stats)        report)        geography)
@@ -100,7 +101,7 @@ License status: **263 active**, 23 invalid, 9 archived. *\*Among the 18 vendors 
 
 ## Repository structure
 
-```
+```text
 .
 ├─ src/
 │  ├─ acquisition/      # NCLBGC scrapers (Selenium, Playwright)
