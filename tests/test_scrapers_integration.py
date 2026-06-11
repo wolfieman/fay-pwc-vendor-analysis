@@ -20,6 +20,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
+from vendorscope.evp_client import EVPClient
 from vendorscope.nclbgc_client import NCLBGCClient
 
 _OFFLINE = os.environ.get("TEST_MODE", "true").lower() != "false"
@@ -94,3 +95,13 @@ def test_nclbgc_client_finds_known_license_via_http():
     assert detail["company_name"] == KNOWN_COMPANY
     assert detail["status"]
     assert record["qualifiers"]
+
+
+@pytest.mark.integration
+def test_evp_client_fetches_active_public_utilities_via_fast_path():
+    """The browserless eVP fast path returns the filtered Active vendor set."""
+    with EVPClient() as client:
+        records = client.fetch_records()
+    assert len(records) > 400  # ~570 Active + Public Utilities (grows over time)
+    assert all(r["EvpStatus"] == "Active" for r in records)
+    assert any(r["Name"] == "24North Investments LLC" for r in records)
