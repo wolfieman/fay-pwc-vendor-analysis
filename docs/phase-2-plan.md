@@ -52,15 +52,21 @@ valid licenses to pull the 12-column details.
   …) and returns the results **table HTML**. Each row carries an opaque `key`; detail/qualifiers
   via `GET /Public/_ShowAccountDetails/?key=<k>&Source=Search`, `/_ShowAccountQualifiers/?key=<k>`.
   ⇒ Replace Playwright/Selenium with **`httpx` + HTML-fragment parsing** (keep one session cookie).
-- **eVP = JSON API, token-bound + tamper-proofed ⇒ API-assisted headless browser.** Rows come
-  from `POST https://evp.nc.gov/_services/entity-subgrid-data.json/<gridId>` → `application/json`,
-  requiring an `__RequestVerificationToken` header and an opaque, server-signed
-  `base64SecureConfiguration` body (the filter is encrypted into it; the advanced search is an
-  ASP.NET WebForms `__VIEWSTATE` postback). ⇒ Drive the filtered results page in **headless
-  Playwright and harvest the `entity-subgrid-data.json` JSON responses while paging** — capture
-  the JSON, don't reverse the blob. Pinned container is needed for eVP only.
+- **eVP = embedded-JSON fast path (no browser); Playwright only to repair filter drift.** The
+  `entity-subgrid-data.json` endpoint first probed was a **dead end** (sidebar widgets only,
+  `ItemCount 0`); the on-screen table is just a 13-column summary. The real source: the filtered
+  results page server-renders the **entire dataset inline as a JS `var data = "[…]"`**
+  (HTML-entity-encoded, materialized from FetchXML) — Export-to-Excel merely converts that var
+  client-side. ⇒ **Fast path (no browser):** one
+  `GET https://evp.nc.gov/vendors/vendordetails/?id=<formGuid>&page=1`, `re.search` out the
+  `var data = "(…)"` blob, `html.unescape`, `json.loads` → the full 41-column vendor master
+  (verified live: 570 records, all `EvpStatus == Active`). The filter state lives on a **shared,
+  persistent Dataverse `evp_vendorsearch` record** (the URL GUID — global; any portal user can
+  change it). ⇒ **Repair path:** drive the search page in Playwright to reset the filters **only
+  when that shared record drifts**. Pinned container is needed only for the repair path.
 
-Net: NCLBGC drops the browser entirely; eVP stays browser-driven but yields clean JSON.
+Net: NCLBGC is fully browserless; eVP is browserless on the happy path, with Playwright as a
+repair fallback only when the shared filter drifts.
 
 ## Database schema (normalized, ~3NF)
 
@@ -97,16 +103,19 @@ Run as sequenced sub-passes with a go/no-go gate between each (not one mega-PR).
   automated access. Probe both sites for APIs (API-first). Lock the PII/mosaic design
   stance (which fields the DB exposes vs. the eventual P3 public index).
   *Gate: terms confirmed + acquisition approach (API vs browser) chosen per source.*
-- **P2.1 — Scraper hardening + offline parsing tests (test-first).** Build the NCLBGC
-  `httpx` client + pure HTML-fragment parsers; build Stage-1 eVP acquisition (headless JSON
-  harvest) to reproduce PWC's filters. Pure parsers are covered by **offline contract tests over
-  saved fixtures** (HTML for NCLBGC, JSON for eVP) that run deterministically in default CI.
-  Live validation is **opt-in integration tests** — extend `tests/test_scrapers_integration.py`
+- **P2.1 — Scraper hardening + offline parsing tests (test-first). ✅ DONE — PR #8 (NCLBGC) +
+  PR #9 (eVP), both merged.** Shipped the NCLBGC `httpx` client + pure HTML-fragment parsers
+  (`nclbgc_client.py` / `nclbgc_parse.py`) and Stage-1 eVP acquisition (`evp_client.py` /
+  `evp_parse.py`: embedded-`var data` fast path + Playwright repair) on the shared
+  `vendorscope.http` session, reproducing PWC's filters. Pure parsers are covered by **offline
+  contract tests over saved fixtures** (HTML fragments for NCLBGC; for eVP, sanitized HTML
+  carrying the embedded `var data` blob) that run deterministically in default CI. Live
+  validation is **opt-in integration tests** in `tests/test_scrapers_integration.py`
   (`@pytest.mark.integration`, gated by `TEST_MODE`; skipped by default, run with
-  `TEST_MODE=false uv run pytest -m integration`), the documented pattern already established for
-  the Part-1 canary. (The one-off `scripts/probe_endpoints.py` used for endpoint discovery has
-  served its purpose and is removed; its checks become integration tests.)
-  *Gate: offline contract tests green in CI; live integration tests pass against both sources.*
+  `TEST_MODE=false uv run pytest -m integration`) — both eVP live paths and NCLBGC canary parity
+  verified. (The one-off `scripts/probe_endpoints.py` used for endpoint discovery served its
+  purpose and was removed.)
+  *Gate met: offline contract tests green in CI; live integration tests pass against both sources.*
 - **P2.2 — Own database.** Implement the schema above; a `vendorscope.db` loader inserts
   the cleaned frames; reproducible build from saved raw snapshots.
   *Gate: rebuild from the saved `v##` snapshots reproduces the current cleaned dataset
