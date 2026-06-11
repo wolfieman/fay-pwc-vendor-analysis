@@ -11,6 +11,7 @@ import urllib.parse
 
 import httpx
 
+from vendorscope.http import HttpSession
 from vendorscope.nclbgc_parse import (
     parse_detail,
     parse_qualifiers,
@@ -18,15 +19,9 @@ from vendorscope.nclbgc_parse import (
 )
 
 _BASE = "https://portal.nclbgc.org"
-_USER_AGENT = (
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
-)
 _HEADERS = {
-    "User-Agent": _USER_AGENT,
     "X-Requested-With": "XMLHttpRequest",
     "Referer": f"{_BASE}/Public/Search",
-    "Accept": "*/*",
 }
 # The full advanced-search form; only a few fields are ever set.
 _SEARCH_FIELDS = (
@@ -44,25 +39,12 @@ _SEARCH_FIELDS = (
 )
 
 
-class NCLBGCClient:
+class NCLBGCClient(HttpSession):
     """Stateful session against the NCLBGC portal. Use as a context manager."""
 
     def __init__(self, client: httpx.Client | None = None, timeout: float = 30.0):
-        self._client = client or httpx.Client(
-            base_url=_BASE, headers=_HEADERS, timeout=timeout, follow_redirects=True
-        )
-        self._owns_client = client is None
+        super().__init__(_BASE, client=client, timeout=timeout, headers=_HEADERS)
         self._primed = False
-
-    def __enter__(self) -> NCLBGCClient:
-        return self
-
-    def __exit__(self, *_exc: object) -> None:
-        self.close()
-
-    def close(self) -> None:
-        if self._owns_client:
-            self._client.close()
 
     def _prime(self) -> None:
         """Fetch the search page once to establish the session cookie."""
