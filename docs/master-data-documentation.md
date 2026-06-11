@@ -16,9 +16,16 @@ The tables are maintained separately and joined on `License_Number`.
 
 ## Controlled vocabularies
 
-- **HUB status:** Certified · Not Certified · Unknown
+Read from the sources' actual values (not assumed); blank means "missing / unevaluated"
+everywhere and is never imputed.
+
+- **HUB / NCSBE status:** Certified · Not Certified · _(blank = unevaluated)_
+- **eVP status:** Active · Pending · Debarred
+- **NC eProcurement status:** Active · Inactive · Not Applicable _(a 3-value status, not a boolean)_
 - **License status:** Active · Expired · Suspended · Revoked · Inactive · Pending
-- **License limitation:** Unlimited · Limited · Intermediate
+- **License limitation (NCLBGC):** Unlimited · Limited · Intermediate
+- **General-contractor limitation (vendor):** Unlimited · Limited · Intermediate · None _(literal `None` is a valid value)_
+- **Trade-participation flags:** sources emit `True` / `False`, normalized to `Yes` / `No`
 - **Classifications:** semicolon-delimited (e.g., `Building; Highway; PU(Water Lines & Sewer Lines)`)
 
 ## Field conventions

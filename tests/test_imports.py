@@ -26,6 +26,12 @@ PACKAGE_MODULES = [
     "vendorscope.profiling",
     "vendorscope.audit",
     "vendorscope.pipeline",
+    "vendorscope.cleaning",
+    "vendorscope.cleaning.transforms",
+    "vendorscope.cleaning.config",
+    "vendorscope.cleaning.validate",
+    "vendorscope.cleaning.pipeline",
+    "vendorscope.cleaning.cli",
 ]
 SCRIPT_MODULES = [
     "clean_data",

@@ -12,7 +12,8 @@ Controlled vocabularies and terminology live in
 2. Lowercase all email addresses; require a single `@`.
 3. Format phone numbers as `###-###-####`.
 4. Business names: hybrid capitalization (Title Case, preserving acronyms) with standardized
-   legal suffixes (LLC, Inc., Co., Corp., Ltd.).
+   legal suffixes (LLC, Inc., Co., Corp., Ltd.). Digit-led tokens (e.g. `42YL`, `51ST`) carry
+   no usable case signal and are left unchanged.
 5. Dates: `MM/DD/YYYY`.
 6. Store license numbers and ZIP codes as **text** — never coerce to numeric (preserves leading zeros).
 7. Keep the vendor table and the licensing table **separate** (joined only on `License_Number`).
@@ -25,7 +26,8 @@ Controlled vocabularies and terminology live in
 3. Regex-format phones (`###-###-####`).
 4. Normalize `Vendor_Name` (hybrid case + legal-suffix standardization).
 5. Proper-case the address fields.
-6. Validate HUB to the controlled vocabulary (Certified / Not Certified / Unknown).
+6. Validate HUB and NCSBE to the controlled vocabulary (Certified / Not Certified; blank means
+   unevaluated and is never imputed).
 7. Keep license-number fields as text.
 8. De-duplicate on `Vendor_Name` + `License_Number`.
 

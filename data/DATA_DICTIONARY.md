@@ -35,21 +35,21 @@ emails scrubbed) is published in [`sample/`](sample/) so reviewers can reproduce
 | 11 | Country | text | Country | ⚪ |
 | 12 | URL | text | Company website | 🟡 |
 | 13 | Evp_Status | category | NC electronic Vendor Portal status | ⚪ |
-| 14 | NC_eProcurement | bool | Registered in NC eProcurement | ⚪ |
-| 15 | HUB | category | Historically Underutilized Business status (Yes/No/Unknown) | ⚪ |
+| 14 | NC_eProcurement | category | NC eProcurement status (Active / Inactive / Not Applicable) | ⚪ |
+| 15 | HUB | category | HUB status (Certified / Not Certified; blank = unevaluated) | ⚪ |
 | 16 | HUB_Category | category | HUB demographic category (e.g., Female, Black, Hispanic) | ⚪ |
 | 17 | HUB_Cert_Start_Date | date | HUB certification start (`MM/DD/YYYY`) | ⚪ |
 | 18 | HUB_Cert_End_Date | date | HUB certification end | ⚪ |
 | 19 | HUB_Active | bool | HUB certification currently active | ⚪ |
 | 20 | PWC_Active | bool | Active vendor relationship with PWC | ⚪ |
-| 21 | NCSBE | category | NC Small Business Enterprise status | ⚪ |
+| 21 | NCSBE | category | NCSBE status (Certified / Not Certified; blank = unevaluated) | ⚪ |
 | 22 | NCSBE_Cert_Start_Date | date | NCSBE certification start | ⚪ |
 | 23 | NCSBE_Cert_End_Date | date | NCSBE certification end | ⚪ |
 | 24 | Small_Business | bool | Small-business flag | ⚪ |
 | 25 | DBE | bool | Disadvantaged Business Enterprise flag | ⚪ |
 | 26 | NPWC | category | Internal PWC vendor classification | ⚪ |
 | 27 | General_Contractor | bool | Holds a general-contractor license | ⚪ |
-| 28 | General_Contractor_Limitation | category | GC limitation (Unlimited/Limited/Intermediate) | ⚪ |
+| 28 | General_Contractor_Limitation | category | GC limitation (Unlimited / Limited / Intermediate / None) | ⚪ |
 | 29 | General_Contractor_Work_Classification | text | GC work classifications | ⚪ |
 | 30 | General_Contractor_License_Number | text | GC license number | 🟡 |
 | 31 | Electrical_Contractor | bool | Holds an electrical license | ⚪ |
