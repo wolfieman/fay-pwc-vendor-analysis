@@ -116,29 +116,37 @@ Run as sequenced sub-passes with a go/no-go gate between each (not one mega-PR).
   verified. (The one-off `scripts/probe_endpoints.py` used for endpoint discovery served its
   purpose and was removed.)
   *Gate met: offline contract tests green in CI; live integration tests pass against both sources.*
-- **P2.1.5 — Cleaning engine adoption + conformance verify (NEXT).** Re-author the reviewed
-  cleaning engine (pure functional core, `Correction`/`Violation` split, generic engine +
+- **P2.1.5 — Cleaning engine adoption + conformance verify. ✅ DONE — PR #11.** Re-authored the
+  reviewed cleaning engine (pure functional core, `Correction`/`Violation` split, generic engine +
   `TableConfig` case-config, PII split, idempotent) into a `src/vendorscope/cleaning/` subpackage
-  through our standards (banner, ruff tier, py314, `@pytest.mark.unit` tests). **Reconcile it to
-  our documented schema, not eVP's raw spelling:** map the eVP `var data` raw field names → the
-  `data/DATA_DICTIONARY.md` columns at the ingest boundary, normalize to **snake_case** via
-  `vendorscope.text.snake` (per `standards/sql-data/data-discipline.md`), and point the engine
-  configs at our snake_case columns. The engine supersedes the old `profiling.normalize` cleaning;
-  keep `profile_dataframe` / `build_report`. Land the empirical vocabulary corrections it surfaced
-  (HUB = Certified/Not Certified/blank; trade flags True/False; `NCeProcurement` 3-valued; literal
-  "None" GC limitation) into the protocol + data dictionary.
-  *Gate: ruff/format/pytest green; the engine reproduces the documented smoke run (≈7,096
-  corrections / 154 violations incl. 64 license-number cells surfaced, not coerced), is idempotent,
-  and produces the PII split — cleaned frames ready to load.*
+  through our standards (banner, ruff tier, py314, `@pytest.mark.unit` tests; resolves the
+  `pipeline.py` name collision). The engine does **value cleaning** on the acquisition output with
+  its configs **as-authored** — each mirrors its source's raw field names (eVP = PascalCase
+  `var data`, NCLBGC = Title_Case). **The snake_case / documented-schema mapping is deferred to
+  P2.2** — it is the same column→relational-schema mapping the DB build already does
+  (`data-discipline.md`: raw keeps source naming, processed is snake_case, dictionary authoritative;
+  the rename lands at the DB-load boundary). The legacy `profiling.normalize` / `clean_data.py` /
+  `reproduce()` path is left **untouched** (additive; consolidation rides with P2.2). Landed the
+  empirical vocabulary corrections it surfaced (HUB/NCSBE = Certified/Not Certified/blank; trade
+  flags True/False; `NCeProcurement` 3-valued; literal "None" GC limitation; digit-led-token casing)
+  into the protocol + data dictionary.
+  *Gate (met): ruff/format/pytest green (137 passed / 4 skipped); a real-data run reproduced 7,096
+  vendor corrections + 64 license-number format cells exactly, idempotent (re-clean → 0), PII split
+  clean. (The earlier ≈154-violation figure was a matched-snapshot total; referential/conditional
+  counts scale with the paired license snapshot.)*
 - **DB-standards harvest — flagged, cross-repo (runs before P2.2).** The engine's `GAP_ANALYSIS`
   independently corroborated our locked schema decisions (TEXT ids/ZIPs/dates, CHECK-constraint
   vocabularies, child tables) and adds durable data-engineering principles (4-stage immutable
   pipeline; run envelope; `as_of`/SCD diff as a first-class product; ingest column-manifest +
   row-conservation). Harvest these into `orchestrator/standards/sql-data/` as a **deliberate,
   separately-run pass immediately before P2.2 schema finalization** — blast radius = all repos, so
-  parallel-draft the sections and run an adversarial blast-radius check before anything lands.
+  parallel-draft the sections and run an adversarial blast-radius check before anything lands. This
+  pass also codifies the **best-of-breed tool-selection strategy** (two lanes: production guardrails
+  + a sanctioned AI-experimentation lane).
 - **P2.2 — Own database.** Implement the schema above; a `vendorscope.db` loader inserts
-  the cleaned frames; reproducible build from saved raw snapshots. *(Design the normalized
+  the cleaned frames; reproducible build from saved raw snapshots. **Also lands the deferred
+  eVP→documented snake_case mapping, retires the legacy `profiling.normalize` / `reproduce()`
+  cleaning path, and regenerates `data/sample/` from the new acquisition.** *(Design the normalized
   SQLite + `sqlite-vec` schema via a judge-panel of independent drafts against the real eVP 41 +
   NCLBGC 12 columns + the gap-analysis recommendations, scored and synthesized.)*
   *Gate: rebuild from the saved `v##` snapshots reproduces the current cleaned dataset
