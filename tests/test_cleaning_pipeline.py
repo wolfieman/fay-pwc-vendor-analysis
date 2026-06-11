@@ -132,9 +132,7 @@ class TestVendorPipeline:
         assert ("email", "MainContactEmail") in rules
         assert ("phone", "MainContactPhone") in rules
         assert ("vocabulary", "EvpStatus") in rules
-        bad_status = next(
-            v for v in result.violations if v.column == "EvpStatus"
-        )
+        bad_status = next(v for v in result.violations if v.column == "EvpStatus")
         assert bad_status.value == "Frozen"
         assert result.frame.iloc[1]["EvpStatus"] == "Frozen"
 
