@@ -1,6 +1,8 @@
 # Documentation
 
-- [data-cleaning-protocol.md](data-cleaning-protocol.md) — the repeatable standardization protocol.
+- [project-plan.md](project-plan.md) — the working plan: delivery method, quality strategy, the slice backlog with gates, and the carried-forward requirements register.
+- [data-cleaning-protocol.md](data-cleaning-protocol.md) — the repeatable value-standardization protocol (requirements input for the rebuild).
 - [master-data-documentation.md](master-data-documentation.md) — data standards, controlled vocabularies, and glossary.
+- [database-schema.md](database-schema.md) — design reference for the future database slice.
 
-See also the column-level schema in [`../data/DATA_DICTIONARY.md`](../data/DATA_DICTIONARY.md).
+The column-level data dictionary (`data/DATA_DICTIONARY.md`) regenerates in the eVP slice; the retired Part-1 version lives in git history.
