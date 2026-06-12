@@ -11,6 +11,10 @@ dependencies = [
     "pandas>=3.0",
 ]
 
+# The single console entrypoint; subcommands are acquire-evp, profile, clean.
+[project.scripts]
+vendorscope = "vendorscope.cli:main"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
