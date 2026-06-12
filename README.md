@@ -18,6 +18,7 @@ but the vendor data was incomplete and unverified. I assembled the data from two
 built a documented cleaning-and-audit pipeline, and produced descriptive analytics across **295 vendors**.
 
 **Headline results:**
+
 - **65.4%** of vendors (193 of 295) had **missing HUB (Historically Underutilized Business) status**, the single biggest data-quality gap.
 - Of vendors with known status, **80 are HUB-certified** and **22 are explicitly not certified**.
 - **Recommendation:** prioritize outreach to the **22 non-HUB-certified vendors** for economic-inclusion conversations, and close the HUB-status gap at vendor intake.
@@ -49,7 +50,7 @@ schema in [`data/DATA_DICTIONARY.md`](data/DATA_DICTIONARY.md):
 
 ## Methodology
 
-```
+```text
 Acquisition  →  Cleaning  →  Profiling  →  Audit  →  Descriptive analytics
 (Selenium /     (protocol     (per-column   (missingness   (HUB, licensing,
  Playwright)     standardize)   stats)        report)        geography)
@@ -100,7 +101,7 @@ License status: **263 active**, 23 invalid, 9 archived. *\*Among the 18 vendors 
 
 ## Repository structure
 
-```
+```text
 .
 ├─ src/
 │  ├─ acquisition/      # NCLBGC scrapers (Selenium, Playwright)
@@ -115,6 +116,33 @@ License status: **263 active**, 23 invalid, 9 archived. *\*Among the 18 vendors 
 ├─ docs/                # data-cleaning protocol + master-data documentation
 ├─ pyproject.toml       # dependencies (uv project)
 └─ uv.lock              # pinned, reproducible environment
+```
+
+## Database (Phase 2)
+
+Phase 2 turns the flat-file pipeline into a maintained data product: a **single SQLite
+file** holding the normalized relational tables *and* the embedding vectors (via
+[`sqlite-vec`](https://github.com/asg017/sqlite-vec)). STRICT tables, enforced foreign
+keys, `CHECK`-constraint vocabularies, and PII quarantined into `*_pii` sibling tables so
+the public export is PII-free by construction. Full reference + design rationale:
+[`docs/database-schema.md`](docs/database-schema.md); the canonical DDL is
+[`src/vendorscope/db/schema.py`](src/vendorscope/db/schema.py).
+
+```mermaid
+erDiagram
+    source ||--o{ acquisition_run : "scraped in"
+    acquisition_run ||--o{ vendor : stamps
+    acquisition_run ||--o{ license : stamps
+    license ||--|| license_pii : "PII"
+    license ||--o{ qualifier : has
+    qualifier ||--|| qualifier_pii : "PII"
+    license ||--o{ license_classification : ""
+    classification ||--o{ license_classification : ""
+    license |o--o{ vendor : "GC license of"
+    vendor ||--|| vendor_pii : "PII"
+    vendor ||--o{ vendor_trade : holds
+    vendor ||--o{ vendor_certification : carries
+    vendor ||--o| vendor_embedding : "vector (P2.3)"
 ```
 
 ## Reproduce
