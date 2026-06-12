@@ -58,13 +58,21 @@ class NCLBGCClient(HttpSession):
         company: str = "",
         license_number: str = "",
         classification_id: str = "",
+        like_sounding: bool = False,
     ) -> list[dict[str, str]]:
-        """Run the portal search and return one parsed dict per result row."""
+        """Run the portal search and return one parsed dict per result row.
+
+        ``like_sounding`` enables the portal's phonetic matching (the "Include
+        like sounding names" option, its ``useSoundex`` flag) — a useful name
+        fallback when an exact company-name search returns nothing.
+        """
         self._prime()
         form: dict[str, str] = dict.fromkeys(_SEARCH_FIELDS, "")
         form["CompanyName"] = company
         form["AccountNumber"] = license_number
         form["ClassificationDefinitionIdnt"] = classification_id
+        if like_sounding:
+            form["useSoundex"] = "true"
         resp = self._client.post("/Public/_Search/", data=form)
         resp.raise_for_status()
         return parse_search_rows(resp.text)

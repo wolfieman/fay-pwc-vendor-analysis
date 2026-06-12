@@ -26,6 +26,8 @@ build-backend = "hatchling.build"
 # scripts are run by file path, not imported as part of a distribution.
 [tool.hatch.build.targets.wheel]
 packages = ["src/vendorscope"]
+# Experimental, not-yet-finalized code; kept in the repo but never shipped.
+exclude = ["src/vendorscope/sandbox"]
 
 [tool.uv]
 package = true
