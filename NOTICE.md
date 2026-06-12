@@ -17,10 +17,11 @@ the Fayetteville Public Works Commission (PWC) vendor base.<br>
 
 ## Data Attribution
 
-This project uses two publicly available source datasets (295 records each). The raw files
-contain contact PII and are **not committed**; an anonymized, PII-stripped sample ships
-under [`data/sample/`](data/sample/) as the public reproduction path (schema in
-[`data/DATA_DICTIONARY.md`](data/DATA_DICTIONARY.md)).
+This project uses two publicly available source datasets (295 records each in the
+Part-1 study). The raw files contain contact PII and are **not committed**. The Part-1
+anonymized sample and its data dictionary were retired with the original pipeline
+(both live in git history); the rebuilt pipeline regenerates them (see
+[`docs/project-plan.md`](docs/project-plan.md)).
 
 1. **Fayetteville PWC vendor list**
    - Source: Fayetteville Public Works Commission (eVP, `evp.nc.gov`)

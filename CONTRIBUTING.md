@@ -2,8 +2,8 @@
 
 VendorScope is built to a consistent set of engineering standards. This document
 records them so the project stays legible, reproducible, and easy to extend. It
-is a living document: as new capabilities land (see **Roadmap**), they are
-documented here.
+is a living document: as new capabilities land (see **Plan**), it is updated in
+the same PR.
 
 > This repo is the **reference implementation** of VendorScope: the reusable
 > engine plus a real, end-to-end worked example (the Fayetteville PWC vendor
@@ -11,39 +11,41 @@ documented here.
 
 ## Project layout
 
-```
-src/vendorscope/      # the pure, IO-free core (installable package)
-  text.py             #   header / company-name / license / vendor-key normalization
-  columns.py          #   license-column detection + column-index resolution
-  profiling.py        #   dataframe standardization + profiling
-  audit.py            #   markdown audit-report rendering
-  pipeline.py         #   thin orchestrator (subcommands; no analysis logic)
-src/acquisition/      # site-specific scrapers (Selenium, Playwright) — IO shell
-src/cleaning/         # pandas cleaning / profiling / audit scripts — IO shell
-tests/                # unit, import-smoke, CLI-help, pipeline + opt-in live integration
-data/                 # sample (anonymized, committed) · raw + processed (gitignored)
+```text
+src/vendorscope/      # the installable package; everything importable lives here
+  paths.py            #   the single root-finder + data-zone constants
+tests/                # pytest suite; fixtures under tests/fixtures/
+docs/                 # project plan (backlog + gates) and data references
+data/                 # raw + processed (gitignored, PII); sample regenerates in the eVP slice
+scratch/              # gitignored experiments; promoted only by re-authoring into the package
 ```
 
-**Functional-core / imperative-shell** is the house architecture: pure transforms
-live in `vendorscope/` (no file/network/browser IO) and are unit-tested; all IO
-stays in the scripts that import them.
+**Functional core / imperative shell** is the house architecture: pure transforms
+live in pure modules (no file/network IO) and are unit-tested; IO concentrates in
+boundary modules (acquisition clients, tabular IO) and a single CLI shell as they
+land, slice by slice.
 
 ## Toolchain
 
 - **Python 3.14** (the OS-level interpreter; we do not install per-project Pythons).
 - **uv** for the environment and locking: `uv sync` (runtime + dev), `uv lock`.
+  CI syncs with `--locked`, so lockfile drift fails loud.
 - **ruff** for lint *and* format, always via `uv run ruff` (pinned in the lockfile).
   Zero violations is the gate; `main` stays clean.
 - **pytest** for tests; coverage is **measured, not gated**.
-- **pre-commit** (ruff + secret scanning) and **CI** (`ruff check` + `ruff format
-  --check` + `pytest` + byte-compile) enforce the above on every push and PR.
+- **pyright** (basic mode, scoped to the package) as a local pre-merge check;
+  it is not a CI step.
+- **pre-commit** (ruff + secret scanning) locally, and **CI** (locked sync +
+  `ruff check` + `ruff format --check` + `pytest` + byte-compile) on every push
+  and PR; CI re-runs the content guards server-side for clones without hooks.
 
 ```bash
-uv sync                                   # set up the environment
-uv run ruff check src tests               # lint
-uv run ruff format src tests              # format
-uv run pytest                             # offline test suite
-uv run python -m vendorscope.pipeline reproduce   # regenerate the analysis from the sample
+uv sync                        # set up the environment
+uvx pre-commit install         # once per clone: local lint + secret-scan hooks
+uv run ruff check src tests    # lint
+uv run ruff format src tests   # format
+uv run pytest                  # offline test suite
+uv run pyright                 # type check (local gate)
 ```
 
 ## Coding standards
@@ -59,26 +61,50 @@ uv run python -m vendorscope.pipeline reproduce   # regenerate the analysis from
 - **Lint scope.** Broad "data/research" ruff select
   (`E,F,W,I,UP,B,SIM,PTH,RUF` + a copyright-banner check), line length 88,
   double quotes.
-- **Licence banner.** Every module's docstring ends with the two-line copyright +
-  Polyform Noncommercial notice (enforced by ruff `CPY001`).
-- **Errors.** Catch the specific exception a block expects (e.g. a Playwright /
-  Selenium error), not bare `Exception`, except at deliberate, annotated top-level
+- **License banner.** Every module's docstring (tests included) ends with the
+  two-line copyright + Polyform Noncommercial notice (enforced by ruff `CPY001`).
+- **Errors.** Catch the specific exception a block expects (e.g. an `httpx`
+  error), not bare `Exception`, except at deliberate, annotated top-level
   boundaries.
 
 ## Testing
 
 The marker taxonomy is `unit` / `contract` / `integration`, declared with
-`--strict-markers`. Unit runs are **offline by default** (`conftest.py` sets
-`TEST_MODE=true`).
+`--strict-markers`. Unit and contract runs are **offline by default**
+(`conftest.py` sets `TEST_MODE=true`); fixtures never carry real contact data.
 
 ```bash
-uv run pytest                                    # offline: unit + import-smoke + cli-help + pipeline
-TEST_MODE=false uv run pytest -m integration     # opt-in: live scrapers against the NCLBGC portal
+uv run pytest                                  # offline: unit + contract
+TEST_MODE=false uv run pytest -m integration   # opt-in: live acquisition checks
 ```
 
-The live integration test asserts a known-good fixture on the real portal, so a
-failure flags either a real regression or **site drift** (the page changed) — the
-signal to re-validate the scrapers.
+A live integration failure flags either a real regression or **site drift** (a
+source page changed): the signal to re-validate acquisition before trusting a pull.
+
+## Process
+
+Work ships as **vertical slices** on a kanban flow:
+
+- **Board:** GitHub Issues is the single source of truth (one issue per slice
+  card; epic labels; `blocked` as a label). No board files live in the tree.
+- **Columns:** Backlog, Ready, In Progress, Verifying, Done. **WIP limit: one
+  slice**, counted across In Progress and Verifying. Micro-chores (under about
+  30 minutes) bypass the board.
+- **Card text is values-free:** counts by rule, column names, and percentages
+  only; never a data value or a before/after pair.
+- **Each card walks the full loop:** requirements, analysis, design, baseline,
+  test-first, implement, verify, document/release, retro.
+- **Definition of done** (beyond the machine gates): diff reviewed against the
+  card's numbered requirements; PII sweep of every tracked artifact; gate
+  evidence attached to the card; docs updated where behavior changed; a short
+  retro comment; the owner's merge of the slice PR is the go decision.
+- **Pre-merge ritual**, only under a green suite: full offline run, correctness
+  review, simplification pass, lint + format + type check, then the PR. One
+  short-lived branch and PR per slice (a recorded local deviation from the
+  trunk-only default).
+- **Releases** are deliberate milestone tags, with the version synced across
+  `pyproject.toml` and `CITATION.cff` at tag time. `main` is always
+  clone-and-run; there is no automated deployment.
 
 ## Commits
 
@@ -87,15 +113,9 @@ signal to re-validate the scrapers.
 attribution trailers, secrets, or absolute paths (a `commit-msg` hook enforces
 this).
 
-## Roadmap
+## Plan
 
-VendorScope is developed as a 3-part arc; this document grows with it.
-
-- **Part 1 — standards conformance, repositioning & refactor** *(done)*: installable
-  `vendorscope` package on Python 3.14, the pure core extracted and unit-tested,
-  broad-tier ruff conformance, a reproducible pipeline entry point, the scrapers
-  decomposed, and a CI gate (lint + format + tests).
-- **Part 2 — data refresh & data layer**: re-validate the scrapers against the live
-  sites, refresh the data, build a proper data store, and add offline
-  scraper-parsing tests (HTML fixtures); generalize the cleaning to multiple sources.
-- **Part 3 — application & website**: expose the engine as an app/site.
+- **Part 1 (shipped):** the published PWC case study (see [`reports/`](reports/)).
+- **The rebuild (current):** greenfield, in gated slices per
+  [`docs/project-plan.md`](docs/project-plan.md): harness, eVP pipeline, NCLBGC
+  pipeline, validation, database, AI/vector layer, automated refresh, app sketch.

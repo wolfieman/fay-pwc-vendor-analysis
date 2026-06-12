@@ -3,7 +3,7 @@
 How the vendor dataset was assembled, cleaned, audited, and analyzed. This is the detailed
 companion to the overview in the [project README](../README.md).
 
-```
+```text
 Acquisition  →  Cleaning  →  Profiling  →  Audit  →  Descriptive analytics
 ```
 

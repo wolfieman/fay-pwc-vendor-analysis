@@ -1,9 +1,14 @@
 # Master Data Documentation
 
+> **Status (2026-06-12):** carried forward as requirements input for the
+> greenfield rebuild (see [project-plan.md](project-plan.md)). Vocabularies are
+> re-profiled from the live sources each slice; a documented-vs-source mismatch
+> is a documentation correction, never a data correction.
+
 Reference standards, controlled vocabularies, and terminology for the PWC vendor & licensing
 datasets. The cleaning steps that enforce these standards are in
-[data-cleaning-protocol.md](data-cleaning-protocol.md); the per-column schema is in
-[`../data/DATA_DICTIONARY.md`](../data/DATA_DICTIONARY.md).
+[data-cleaning-protocol.md](data-cleaning-protocol.md); the per-column schema
+regenerates in the eVP slice as `data/DATA_DICTIONARY.md`.
 
 ## Tables
 

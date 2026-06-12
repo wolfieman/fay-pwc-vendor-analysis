@@ -1,11 +1,15 @@
 # Database Schema
 
-VendorScope's Phase 2 database is a **single SQLite file** holding the normalized
+> **Status (2026-06-12):** design reference for the future database slice. The
+> implementation this document described was retired in the greenfield reset;
+> the design below is carried-forward knowledge, to be re-authored fresh when
+> the database slice opens (see [project-plan.md](project-plan.md)).
+
+VendorScope's planned database is a **single SQLite file** holding the normalized
 relational tables *and* the embedding vectors (via the
 [`sqlite-vec`](https://github.com/asg017/sqlite-vec) `vec0` extension). Clone and
-run; there is no service to host. The canonical, authoritative DDL lives in
-[`src/vendorscope/db/schema.py`](../src/vendorscope/db/schema.py) (`SCHEMA_SQL`);
-this document is the human-facing reference.
+run; there is no service to host. The canonical DDL will be authored in the
+database slice; this document is the design reference.
 
 ## Entity-relationship diagram
 

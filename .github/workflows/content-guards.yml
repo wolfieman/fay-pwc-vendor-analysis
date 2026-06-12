@@ -6,9 +6,9 @@ name: content-guards
 #   1. gitleaks       — secret scanning. BLOCKING: a leaked secret fails CI.
 #   2. ai-signatures  — embedded AI-authorship signatures. BLOCKING: a hit fails CI.
 #
-# This file is the single-source master in orchestrator/standards/ci/. It is
-# copied verbatim into each repo's .github/workflows/. Edit the master, then
-# re-roll; do not hand-edit per-repo copies.
+# This file is managed centrally and copied verbatim into each repo's
+# .github/workflows/. Edit the central master, then re-roll; do not
+# hand-edit per-repo copies.
 
 on:
   push:

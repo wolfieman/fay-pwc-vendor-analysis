@@ -1,5 +1,5 @@
 # Master template. Copied to each repo's .github/dependabot.yml with
-# VENDOR replaced by the repo's commit tag (EVPULSE, ORCHSTR, ...).
+# VENDOR replaced by the repo's commit tag.
 #
 # Keeps SHA-pinned GitHub Actions current: floating tags were replaced with
 # commit SHAs (supply-chain hardening), which never auto-update, so Dependabot

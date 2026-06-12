@@ -2,8 +2,8 @@
 
 Detailed results of the vendor availability & licensing analysis for the Fayetteville Public
 Works Commission (PWC), across **295 vendors**. All figures below are computed directly from
-the source data. For the schema see [`../data/DATA_DICTIONARY.md`](../data/DATA_DICTIONARY.md);
-for how the data was produced see [`methodology.md`](methodology.md).
+the source data. The Part-1 data dictionary was retired with the original pipeline
+(it lives in git history); for how the data was produced see [`methodology.md`](methodology.md).
 
 ## HUB certification — the headline gap
 

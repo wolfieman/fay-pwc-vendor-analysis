@@ -1,10 +1,13 @@
 # Data Cleaning Protocol — PWC Vendor & Licensing Data
 
+> **Status (2026-06-12):** carried forward as requirements input for the
+> greenfield rebuild; the scripts this protocol referenced were retired. The
+> column-level data dictionary regenerates in the eVP slice (the retired
+> version lives in git history). See [project-plan.md](project-plan.md).
+
 The repeatable standardization protocol applied to the PWC vendor and licensing datasets.
 Controlled vocabularies and terminology live in
-[master-data-documentation.md](master-data-documentation.md); the column-level schema is in
-[`../data/DATA_DICTIONARY.md`](../data/DATA_DICTIONARY.md). The general rules are implemented in
-[`../src/cleaning/clean_data.py`](../src/cleaning/clean_data.py).
+[master-data-documentation.md](master-data-documentation.md).
 
 ## General rules (both tables)
 
