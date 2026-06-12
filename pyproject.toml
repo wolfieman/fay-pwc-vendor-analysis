@@ -1,6 +1,6 @@
 [project]
 name = "vendorscope"
-version = "0.2.0"
+version = "0.3.0"
 description = "VendorScope: vendor readiness & availability analytics. Turns public vendor and licensing data into an audited, decision-ready view of supplier availability and procurement readiness."
 readme = "README.md"
 requires-python = ">=3.14"
