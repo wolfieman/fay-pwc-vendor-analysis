@@ -147,20 +147,10 @@ erDiagram
 
 ## Reproduce
 
-The repo ships an anonymized sample in `data/sample/` (PII removed), so the pipeline runs out of the box. One command runs the full clean, profile, and audit chain (no scraping):
-
-```bash
-uv sync                                          # create env from uv.lock
-uv run python -m vendorscope.pipeline reproduce  # clean, profile, audit over data/sample
-```
-
-Or run each stage directly:
-
-```bash
-uv run python src/cleaning/clean_data.py --input data/sample/vendor-details-evp-nc.csv
-uv run python src/cleaning/profile_data.py --files data/sample/vendor-details-evp-nc.csv data/sample/nclbgc-license-details.csv
-uv run python src/cleaning/make_audit.py         # writes data/processed/data_audit.md
-```
+The pipeline is being rebuilt from a clean slate (2026-06) and lands in gated
+slices; the original flat-file pipeline and its anonymized sample have been
+retired. Until the rebuilt pipeline ships a new sample, the published Part-1
+analysis is documented in [`reports/`](reports/).
 
 ## Tech stack
 
