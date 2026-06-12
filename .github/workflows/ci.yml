@@ -5,6 +5,9 @@ on: [push, pull_request]
 permissions:
   contents: read
 
+env:
+  TEST_MODE: "true" # offline default; live integration tests never run in CI
+
 jobs:
   lint-test:
     runs-on: ubuntu-latest
@@ -15,7 +18,7 @@ jobs:
         with:
           python-version: "3.14"
       - name: Sync dependencies
-        run: uv sync
+        run: uv sync --locked
       - name: Lint (ruff check)
         run: uv run ruff check src tests
       - name: Format check (ruff format)

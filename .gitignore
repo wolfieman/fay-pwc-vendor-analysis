@@ -20,6 +20,10 @@ reports/_source/
 # Word originals kept locally for reference; canonical docs are the .md files
 docs/*.docx
 
+# experiments live outside the package and outside git; promotion is by
+# re-authoring through the project's standards into src/vendorscope/
+scratch/
+
 # notebooks & tooling
 .ipynb_checkpoints/
 .env
