@@ -16,8 +16,8 @@ authors:
   - family-names: Sanyer
     given-names: Wolfgang
     affiliation: "Fayetteville State University, Broadwell College of Business and Economics"
-version: "0.1.0"
-date-released: "2026-05-25"
+version: "0.3.0"
+date-released: "2026-06-12"
 license: Polyform-Noncommercial-1.0.0
 url: "https://github.com/wolfieman/vendor-scope"
 repository-code: "https://github.com/wolfieman/vendor-scope"

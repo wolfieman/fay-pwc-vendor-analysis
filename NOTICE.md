@@ -2,7 +2,7 @@
 
 **Copyright © 2026 Wolfgang Sanyer**
 Licensed under the Polyform Noncommercial License 1.0.0
-https://polyformproject.org/licenses/noncommercial/1.0.0
+<https://polyformproject.org/licenses/noncommercial/1.0.0>
 
 ---
 
@@ -49,14 +49,14 @@ This software is licensed for **non-commercial use only**. See [LICENSE](LICENSE
 full Polyform Noncommercial License 1.0.0 text and the Required Notice that must travel
 with every copy.
 
-### You MAY:
+### You MAY
 
 ✅ Study the code and methodology<br>
 ✅ Use it for educational purposes<br>
 ✅ Share it with attribution<br>
 ✅ Modify it for personal learning
 
-### You MAY NOT:
+### You MAY NOT
 
 ❌ Use it for commercial purposes<br>
 ❌ Sell the code or derivatives<br>
