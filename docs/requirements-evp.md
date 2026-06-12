@@ -51,3 +51,24 @@ The canonical requirements register is section 9 of [project-plan.md](project-pl
 | ID | Implementation notes |
 |---|---|
 | REQ-20 | Orientation canaries only, never gate equality: about 7,100 corrections, 64 strict license-format violations, about 570 records, from the prior verified pull (a different vintage and filter scope from the published Part-1 study's 295). Divergence is explained in the run report, not forced to match. A zero where tens are expected is itself a red flag. |
+
+## Sampling and confidence (clarification, 2026-06-12)
+
+95% confidence is retained as a recorded standard, homed where it is the correct
+instrument rather than applied to the wrong artifact:
+
+- **Committed test fixture (this slice):** sized by code-path coverage, not a
+  confidence interval — every observed vocabulary value and every quirk appears at
+  least once. A random acceptance sample is rejected here because the
+  highest-value cases are rare (the 7-character ZIP and the dedup pair are each
+  about 1 in 570) and a random draw would systematically under-represent them.
+- **Live conformance (this slice):** the opt-in integration test asserts over the
+  full population (a census, every record), which is the limiting case of a
+  confidence interval — 100% confidence, zero margin — and strictly stronger than a
+  95% acceptance sample. Where a future population is too large or too costly to
+  census (statewide eVP without the Public Utilities filter; NCLBGC per-license
+  enrichment — cards 3 and 6), fall back to a zero-defect acceptance sample at 95%
+  confidence with a 5% defect ceiling (n about 59, the rule of three).
+- **Published representative sample (card P, D10):** when a published dataset must
+  support inference, size it for proportion estimation at 95% confidence, 5% margin,
+  p = 0.5, with the finite-population correction on N about 570 (n about 230).
