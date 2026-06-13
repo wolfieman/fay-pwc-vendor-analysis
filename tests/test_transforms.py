@@ -80,6 +80,21 @@ def test_list_standardizes_to_semicolon_space() -> None:
 
 
 @pytest.mark.unit
+def test_strip_sigils_normalizes_a_single_account_number() -> None:
+    # NCLBGC's uniform type-sigil (L. license, Q. qualifier) stripped to bare digits.
+    # Operates on one value; the engine applies it per '; ' element on the packed
+    # Qualifier_Number (multi=True), so this transform takes a single element.
+    assert t.strip_sigils("L.68764") == ("68764", None)
+    assert t.strip_sigils("Q.900001") == ("900001", None)
+    # already bare, and blank, pass unchanged
+    assert t.strip_sigils("68764") == ("68764", None)
+    assert t.strip_sigils("") == ("", None)
+    # a meaningful prefix is NOT a uniform sigil -> left intact (REQ-09 scope)
+    assert t.strip_sigils("WV063716") == ("WV063716", None)
+    assert t.strip_sigils("NC67579") == ("NC67579", None)
+
+
+@pytest.mark.unit
 def test_vocabulary_map_is_case_folded_and_blank_tolerant() -> None:
     flag = {"true": "Yes", "false": "No"}
     assert t.map_vocabulary("True", allowed=("Yes", "No"), mapping=flag) == (

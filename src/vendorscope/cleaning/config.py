@@ -23,6 +23,28 @@ FILTER_STATUS_CODE = "1"  # Active
 FILTER_CLASSIFICATION_CODE = "790550003"  # Public Utilities
 RECORD_FLOOR = 500  # confirmed at the slice-1 owner checkpoint (documented pull ~570)
 
+# ---- NCLBGC acquisition (slice 2; tokenless portal, verified by the spike) ----
+NCLBGC_BASE = "https://portal.nclbgc.org"
+NCLBGC_SEARCH_URL = f"{NCLBGC_BASE}/Public/_Search/"
+NCLBGC_DETAIL_PATH = "/Public/_ShowAccountDetails/?key={key}&Source=Search"
+NCLBGC_QUALIFIERS_PATH = "/Public/_ShowAccountQualifiers/?key={key}"
+NCLBGC_MATTERS_PATH = "/Public/_ShowNCLBGCPublicMatters/?key={key}"
+# The search POST's named form fields (empty unless we are searching on them).
+NCLBGC_SEARCH_FIELDS = (
+    "ClassificationDefinitionIdnt",
+    "AccountNumber",
+    "QualifierAccountNumber",
+    "CompanyName",
+    "FirstName",
+    "LastName",
+    "PhoneNumber",
+    "streetAddress",
+    "PostalCode",
+    "City",
+    "StateCode",
+)
+NCLBGC_DELAY = 2.0  # politeness between requests (REQ-18)
+
 # ---- vocabularies (read from the source, never assumed; REQ-08) ----
 FLAG_MAP: dict[str, str] = {"true": "Yes", "false": "No"}
 FLAG_ALLOWED = ("Yes", "No")
@@ -47,6 +69,7 @@ class ColumnRule:
     role: str
     allowed: tuple[str, ...] = ()
     mapping: Mapping[str, str] | None = None
+    multi: bool = False  # apply the role per '; '-element (a packed multi-value cell)
 
 
 @dataclass(frozen=True, slots=True)
@@ -165,4 +188,65 @@ VENDOR_CONFIG = TableConfig(
     columns=_COLUMNS,
     dedup_key=("Name", "GeneralContractorLicenseNumber"),
     red_columns=RED_COLUMNS,
+)
+
+# ---- NCLBGC license-details table (slice 2) ----
+# Roles follow the Master Data Documentation Part II per-column dictionary (the
+# authoritative spec for this table; Part III's cleaning sequence is an incomplete
+# summary that omits the qualifier columns). The `sigil` role strips the uniform
+# L./Q. account-number sigil (decision N3). The qualifier columns are '; '-packed,
+# so Part II's rules apply per element (`multi`): Qualifier_Name hybrid-capped,
+# Qualifier_Status validated against its vocabulary. Splitting into rows is slice 4.
+LICENSE_STATUS = (
+    "Active",
+    "Expired",
+    "Suspended",
+    "Revoked",
+    "Inactive",
+    "Pending",
+    "Invalid",
+    "Archived",
+)
+LICENSE_LIMITATIONS = ("Unlimited", "Limited", "Intermediate")
+QUALIFIER_STATUS = ("Active", "Inactive", "Expired")
+
+_LICENSE_COLUMNS: dict[str, ColumnRule] = {
+    "License_Number": ColumnRule("sigil"),
+    "Company_Name": ColumnRule("name"),
+    "Address": ColumnRule("whitespace"),
+    "Phone": ColumnRule("phone"),
+    "Issue_Date": ColumnRule("date"),
+    "Expiration_Date": ColumnRule("date"),
+    "Status": _vocab(LICENSE_STATUS),
+    "License_Limitation": _vocab(LICENSE_LIMITATIONS),
+    "Classifications": ColumnRule("list"),
+    "Qualifier_Number": ColumnRule("sigil", multi=True),  # packed; sigil per element
+    "Qualifier_Name": ColumnRule("name", multi=True),  # Part II: hybrid capitalization
+    "Qualifier_Status": ColumnRule("vocab", allowed=QUALIFIER_STATUS, multi=True),
+}
+
+LICENSE_EXPECTED_COLUMNS: tuple[str, ...] = tuple(_LICENSE_COLUMNS)
+
+LICENSE_SNAKE_CASE: dict[str, str] = {
+    "License_Number": "license_number",
+    "Company_Name": "company_name",
+    "Address": "address",
+    "Phone": "phone",
+    "Issue_Date": "issue_date",
+    "Expiration_Date": "expiration_date",
+    "Status": "status",
+    "License_Limitation": "license_limitation",
+    "Classifications": "classifications",
+    "Qualifier_Number": "qualifier_number",
+    "Qualifier_Name": "qualifier_name",
+    "Qualifier_Status": "qualifier_status",
+}
+
+LICENSE_RED_COLUMNS = ("Phone", "Qualifier_Name")
+
+LICENSE_CONFIG = TableConfig(
+    name="nclbgc-license-details",
+    columns=_LICENSE_COLUMNS,
+    dedup_key=("License_Number",),
+    red_columns=LICENSE_RED_COLUMNS,
 )

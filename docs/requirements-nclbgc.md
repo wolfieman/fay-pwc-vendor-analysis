@@ -1,0 +1,44 @@
+# Slice 2 Requirements: the NCLBGC Pipeline
+
+**Status:** committed before the build, per the plan's requirements phase · **Last updated:** 2026-06-12
+
+The canonical requirements register is section 9 of [project-plan.md](project-plan.md); slice 2 elaborates **REQ-18** (NCLBGC acquisition) plus the carried findings already numbered there (REQ-06/07/09/11–17). The `R1`–`R9` ids below are the slice-2 mined requirements recorded on the slice card at entry; this document binds each to its acceptance tests, so the PR is reviewed by requirement id rather than by reading the diff. Design rationale and the grounding citations are in [design-nclbgc.md](design-nclbgc.md); the closed coverage matrix is [traceability-nclbgc.md](traceability-nclbgc.md). The entry criterion (the dated terms/robots note, D3 tier 1) is recorded on the slice card.
+
+Slice 2 reuses slice 1's pure core unchanged — `cleaning/{engine,transforms,records}`, `tabular`, `profiling`, `http_client`, `paths` — so the requirements those satisfy (REQ-06 text-mode reads, REQ-09 report-don't-coerce, REQ-11 dedup, REQ-12 `row_key`, REQ-13 manifest, REQ-14 idempotency, REQ-15 conservation, REQ-16 PII split, REQ-17 multi-value packing) hold here by construction and are re-exercised by the NCLBGC tests cited below rather than re-stated.
+
+## Acquisition (R1, R2, R4)
+
+| ID | Implementation notes | Acceptance tests |
+|---|---|---|
+| R1 | **Tokenless session flow.** Prime a session cookie with an initial GET, then `POST {NCLBGC_SEARCH_URL}` (`application/x-www-form-urlencoded`, `x-requested-with: XMLHttpRequest`, no anti-forgery token); the body is the named `NCLBGC_SEARCH_FIELDS`, empty unless searched on. The response is results-table HTML, each row carrying an opaque `key` in an `onclick`. Constants live in config, not inline (REQ-02 analog). | `test_nclbgc_client.py::test_raw_frozen_and_reparsable`; `test_nclbgc_cli.py::test_acquire_nclbgc_freezes_a_run` |
+| R2 | **Per-key fragments.** For each result key, GET the detail, qualifiers, and public-matters fragments (`_ShowAccountDetails` / `_ShowAccountQualifiers` / `_ShowNCLBGCPublicMatters`); all return HTML. The verbatim fragments + decoded JSON + checksum manifest + a resolution report are written to `data/raw/nclbgc/<run-id>/` **before** any check can abort the run (REQ-05 analog). | `test_nclbgc_client.py::test_raw_frozen_and_reparsable`; `test_nclbgc_parse.py::test_decode_record_combines_detail_with_packed_qualifiers` |
+| R4 | **Iterate slice-1 license numbers, resolve-or-flag.** Drive the search from slice 1's general-contractor license numbers, one license at a time with a politeness delay (`NCLBGC_DELAY`, REQ-18). Match license-number first; fall back to normalized company name; a slice-1-flagged or blank number goes straight to name. Every vendor is recorded as matched-by-license / matched-by-name / unresolved and **never silently dropped**. The live gate resolves every slice-1 license or flags it. | `test_nclbgc_client.py::test_resolution_statuses`, `::test_flagged_license_goes_straight_to_name`; live: `test_integration_nclbgc.py::test_live_resolve_matches_expectations` (opt-in) |
+
+## Ingest and parse boundary (R3, R5)
+
+| ID | Implementation notes | Acceptance tests |
+|---|---|---|
+| R3 | **Stdlib parsing (D6).** Parse every fragment with the standard-library HTML parser: the search fragment → the opaque key (an empty search yields none → the flag path); the detail fragment → one license record mapped onto the Part II field names (the constant `Account Type` is dropped at parse); a fragment that no longer matches the template raises a specific `NclbgcTemplateError`. A parsing dependency is added only if the markup demonstrably defeats the stdlib parser, recorded as a fresh decision. | `test_nclbgc_parse.py::test_search_keys_extracted_from_onclick`, `::test_empty_search_yields_no_keys`, `::test_detail_parses_to_part_ii_fields`, `::test_template_miss_raises` |
+| R5 | **Qualifier cell-split + scrub.** Qualifier rows are parsed from the qualifiers table and land `'; '`-packed (REQ-17); the `Status` header-bleed artifact is scrubbed at parse. A legitimately duplicated license maps to one license with multiple qualifiers (a child-table shape, not a bridge): no qualifier spans more than one license. | `test_nclbgc_parse.py::test_qualifiers_parse_to_rows`, `::test_qualifiers_scrub_status_header_bleed`; `test_nclbgc_clean.py::test_packed_qualifier_columns_clean_per_element` |
+
+## Cleaning and config (R6, R8)
+
+| ID | Implementation notes | Acceptance tests |
+|---|---|---|
+| R6 | **License vocabulary.** The status vocabulary includes `Invalid` and `Archived` beyond Active (REQ-08); limitation is Unlimited / Limited / Intermediate; qualifier status is Active / Inactive / Expired. Vocabularies follow Master Data Documentation **Part II** (authoritative), not Part III's summary sequence. Report, don't coerce: an out-of-vocabulary value is flagged and left unchanged (REQ-09). The uniform `L.`/`Q.` account-number sigil is stripped to bare digits and logged as a correction (decision N3), while a meaningful prefix survives as a violation. | `test_nclbgc_clean.py::test_report_dont_coerce_on_out_of_vocabulary_status`, `::test_sigils_stripped_on_license_and_qualifier_numbers`; `test_cleaning_config.py::test_license_every_configured_vocabulary_term_is_documented` |
+| R8 | **Config reconciliation.** `LICENSE_EXPECTED_COLUMNS` single-sources the twelve-field manifest; `LICENSE_SNAKE_CASE` is the rename contract (unique targets); the table config keyset equals the manifest equals the parser's emitted fields, and the whole config agrees with the dictionary's NCLBGC section (the agreement test, REQ-13). | `test_cleaning_config.py::test_license_manifest_is_the_12_documented_fields`, `::test_license_snake_case_rename_matches_dictionary`, `::test_license_config_keyset_is_the_manifest`; `test_nclbgc_clean.py::test_license_config_manifest_matches_the_parser_fields` |
+
+## PII, outputs, and the join (R7, R9)
+
+| ID | Implementation notes | Acceptance tests |
+|---|---|---|
+| R7 | **PII split.** Red columns this slice are `Phone` and `Qualifier_Name` (REQ-16). Their values never appear in any tracked artifact, fixture, or card text; the cleaned output is a two-file split — the deliverable without red columns plus a contacts sibling (`row_key` + red columns), both gitignored; the packed `qualifier_name` lives only in contacts. Fixtures pass the email/phone pattern sweep. | `test_nclbgc_cli.py::test_clean_nclbgc_writes_license_pair_without_red_columns`; `test_cleaning_config.py::test_license_red_set_matches_dictionary`; `test_fixtures_no_pii.py::test_no_email_or_phone_pattern_in_any_fixture` |
+| R9 | **Join.** The license-details table joins back to slice 1 on the general-contractor license number; `License_Number` is both the dedup key and the join key, declared in the dictionary's NCLBGC section and pinned in config. Conservation (`rows_in == rows_out + dedup_drops`) and idempotency hold on the license table. | `test_nclbgc_clean.py::test_license_keys_and_red_set`, `::test_conservation_and_idempotency` |
+
+## Reuse, unchanged
+
+The cleaning engine, transforms, tabular IO, the fixture + sanitizer pattern, the three-marker test taxonomy (unit / contract / integration), and the conservation/idempotency discipline are reused from slice 1 without modification. There is **no drift detector** (decision N5): NCLBGC has no shared, publicly mutable filter to drift, so integrity is guarded by the parser's template-miss error, the resolve-or-flag outcome, and the fact that a by-number hit is itself the confirmation that the number matched.
+
+## Verification inputs
+
+The slice-1 orientation canaries (REQ-20) describe the eVP vintage, not NCLBGC. The slice-2 orientation reference is the published 295-vendor study (`reports/findings-summary.md`): license status ≈ 263 Active / 23 Invalid / 9 Archived and limitation ≈ 206 Unlimited / 82 Limited / 7 Intermediate, on a different population (the prior client list, not the live slice-1 GC license set). These orient the run-report read; the gate never requires equality. The hard, machine-checked invariants are the pipeline-controlled properties: manifest match, idempotency, conservation, preserved leading zeros and sigils-as-corrections, and no imputation.

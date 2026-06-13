@@ -30,6 +30,9 @@ _EMAIL = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}")
 _LEGAL_SUFFIXES = frozenset(
     {"LLC", "INC", "LLP", "PLLC", "PA", "PC", "LTD", "CO", "CORP", "LP"}
 )
+# A NCLBGC uniform account-number type-sigil: a single capital letter + dot
+# (L. license, Q. qualifier). A multi-letter prefix (WV, NC) is not a sigil.
+_SIGIL = re.compile(r"^[A-Z]\.(.+)$")
 
 
 def collapse_whitespace(value: str) -> Result:
@@ -100,6 +103,23 @@ def normalize_list(value: str) -> Result:
         return "", None
     parts = [part.strip() for part in re.split(r"[;,|]", value)]
     return "; ".join(part for part in parts if part), None
+
+
+def strip_sigils(value: str) -> Result:
+    """Strip NCLBGC's uniform ``L.``/``Q.`` account-number type-sigil.
+
+    Operates on one value; the engine applies it per ``'; '`` element on the
+    packed ``Qualifier_Number`` (``multi=True``) and once on the single
+    ``License_Number`` — the same packing mechanism as every other multi column.
+    A meaningful multi-letter prefix (``WV``, ``NC``) is not a sigil and is left
+    intact (REQ-09 scope: the strip normalizes a content-free sigil, not the
+    silent prefix-stripping REQ-09 forbids). The change is the engine's audited
+    correction.
+    """
+    if value.strip() == "":
+        return "", None
+    match = _SIGIL.match(value)
+    return (match.group(1) if match else value), None
 
 
 def map_vocabulary(
