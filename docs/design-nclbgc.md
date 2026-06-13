@@ -72,7 +72,7 @@ Identical to slice 1: `row_key` is the zero-padded ordinal in the decoded record
 For each slice-1 vendor (its cleaned `name` + `general_contractor_license_number`, already classified by slice 1):
 
 1. **Valid NC digit license number** (slice 1's 379 digit class) → search NCLBGC by number. A hit *is* the confirmation that the number matched; fetch and parse; status = **matched-by-license**. No hit → step 2.
-2. **Name fallback** (the documented "normalized-name retries") → search by company name; a hit gives status = **matched-by-name**, flagged for slice-3 scrutiny because name matching is fuzzier.
+2. **Name fallback** (the documented "normalized-name retries") → search by company name; a hit gives status = **matched-by-name**. Name matching is fuzzier than a number hit, but slice 3 treats a match as a match (it does not re-scrutinize slice 2's matches — see `requirements-validation.md`).
 3. **Slice-1-flagged number** — out-of-state / prefixed / multi-value (the 34 "other", for example `WV063716`, `NY Lic: 2045482`) or blank (the 157) → skip the number (an NC-only board cannot match it) and go straight to name (step 2).
 4. **Resolved by neither** → status = **unresolved** (recorded with the searched value and a reason); never silently dropped; counted in the run report; slice 3 excludes the unusable row.
 
