@@ -54,8 +54,9 @@ The loop is closed when three properties hold, all confirmed at the gate:
    `test_nclbgc_parse.py`, `test_nclbgc_client.py`, `test_nclbgc_clean.py`,
    `test_nclbgc_cli.py`, the NCLBGC half of `test_cleaning_config.py`, and the
    live `test_integration_nclbgc.py` all map to an `R*` id.
-3. **Currency.** As of the gate: 76 tests collected, 75 pass, 1 opt-in live test
-   skipped offline; the live test passes on a local opt-in run.
+3. **Currency.** As of the gate: 77 tests collected, 75 pass, 2 opt-in live tests
+   skipped offline (live eVP, live NCLBGC); the live pipeline is verified by the
+   opt-in CLI census recorded on the card (gate item 13).
 
 ## No drift detector (decision N5)
 
