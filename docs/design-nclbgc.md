@@ -39,7 +39,7 @@ The fixture sanitizer (`tools/make_nclbgc_fixture.py`) and the six fixtures alre
 
 ### 4.1 Zones (mirrors 4.1)
 
-- `data/raw/nclbgc/<run-id>/` (gitignored): the verbatim fragments (search / detail / qualifiers / public-matters HTML), `nclbgc-licenses.json` (the mechanically decoded license records, field names as the parser assigns them, values untouched), `acquire-manifest.json` (checksums, timestamp, count, client version), and `resolution-report.json` (the per-vendor match status — the analog of slice 1's drift report).
+- `data/raw/nclbgc/<run-id>/` (gitignored): the verbatim fragments (search / detail / qualifiers / public-matters HTML), `nclbgc-licenses.json` (the mechanically decoded license records, field names as the parser assigns them, values untouched), `acquire-manifest.json` (checksums, timestamp, count, client version), and `resolution-report.json` (the per-vendor match status **and the discovered board license** — the `vendor → license` link slice 3 reconciles, issue #27; the analog of slice 1's drift report).
 - `data/processed/` (gitignored): the deliverable pair — `nclbgc-license-master-<YYYYMMDD>.csv` (no red columns) and `nclbgc-license-contacts-<YYYYMMDD>.csv` (`row_key` + the red columns) — plus `audit/<run-id>/` and `profile/`.
 
 ### 4.2 The license-details schema (twelve columns, per the NCLBGC data dictionary)
