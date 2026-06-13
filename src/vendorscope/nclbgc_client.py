@@ -35,13 +35,19 @@ _SEARCH_HEADERS = {"x-requested-with": "XMLHttpRequest"}
 
 @dataclass(frozen=True, slots=True)
 class Resolution:
-    """How one slice-1 vendor resolved against the board."""
+    """How one slice-1 vendor resolved against the board.
+
+    ``license_number`` is the vendor's input eVP value; ``discovered_license`` is
+    the board-confirmed ``License_Number`` from the matched record (empty when
+    unresolved) — the link slice 3 reconciles into the vendor master (issue #27).
+    """
 
     index: int
     license_number: str
     name: str
     status: str  # matched-by-license | matched-by-name | unresolved
     key: str | None
+    discovered_license: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -112,17 +118,21 @@ def acquire(
         )
         tag = f"{index:0{width}d}"
         (raw_dir / f"search-{tag}.html").write_text(search_html, encoding="utf-8")
-        resolutions.append(Resolution(index, license_number, name, status, key))
-        if key is None:
-            continue
-        # raw-first: freeze each fragment verbatim before decoding
-        detail = _fetch(client, config.NCLBGC_DETAIL_PATH, key)
-        qualifiers = _fetch(client, config.NCLBGC_QUALIFIERS_PATH, key)
-        matters = _fetch(client, config.NCLBGC_MATTERS_PATH, key)
-        (raw_dir / f"detail-{tag}.html").write_bytes(detail.content)
-        (raw_dir / f"qualifiers-{tag}.html").write_bytes(qualifiers.content)
-        (raw_dir / f"matters-{tag}.html").write_bytes(matters.content)
-        records.append(nclbgc_parse.decode_record(detail.text, qualifiers.text))
+        discovered_license = ""
+        if key is not None:
+            # raw-first: freeze each fragment verbatim before decoding
+            detail = _fetch(client, config.NCLBGC_DETAIL_PATH, key)
+            qualifiers = _fetch(client, config.NCLBGC_QUALIFIERS_PATH, key)
+            matters = _fetch(client, config.NCLBGC_MATTERS_PATH, key)
+            (raw_dir / f"detail-{tag}.html").write_bytes(detail.content)
+            (raw_dir / f"qualifiers-{tag}.html").write_bytes(qualifiers.content)
+            (raw_dir / f"matters-{tag}.html").write_bytes(matters.content)
+            record = nclbgc_parse.decode_record(detail.text, qualifiers.text)
+            records.append(record)
+            discovered_license = record["License_Number"]  # the board link (issue #27)
+        resolutions.append(
+            Resolution(index, license_number, name, status, key, discovered_license)
+        )
 
     json_bytes = json.dumps(records, indent=1, ensure_ascii=False).encode("utf-8")
     (raw_dir / "nclbgc-licenses.json").write_bytes(json_bytes)
@@ -138,7 +148,12 @@ def acquire(
         json.dumps(manifest, indent=1).encode("utf-8")
     )
     report = [
-        {"index": r.index, "license_number": r.license_number, "status": r.status}
+        {
+            "index": r.index,
+            "status": r.status,
+            "license_number": r.license_number,  # the vendor's input eVP value
+            "discovered_license": r.discovered_license,  # the board link (issue #27)
+        }
         for r in resolutions
     ]
     (raw_dir / "resolution-report.json").write_bytes(

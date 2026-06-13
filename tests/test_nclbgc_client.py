@@ -106,6 +106,26 @@ def test_flagged_license_goes_straight_to_name(tmp_path: Path) -> None:
 
 
 @pytest.mark.contract
+def test_resolution_carries_discovered_license(tmp_path: Path) -> None:
+    # issue #27: the vendor -> discovered-license linkage must be persisted, so
+    # slice 3 can reconcile a name-matched vendor (whose eVP license was blank or
+    # wrong) to the board-confirmed license. Every matched vendor carries the
+    # decoded License_Number; an unresolved vendor carries "".
+    result = _acquire(tmp_path)
+    assert [r.discovered_license for r in result.resolutions] == [
+        "L.68764",
+        "L.68764",
+        "L.68764",
+        "",
+    ]
+    report = json.loads(
+        (result.raw_dir / "resolution-report.json").read_text(encoding="utf-8")
+    )
+    name_match = next(e for e in report if e["status"] == "matched-by-name")
+    assert name_match["discovered_license"] == "L.68764"
+
+
+@pytest.mark.contract
 def test_raw_frozen_and_reparsable(tmp_path: Path) -> None:
     result = _acquire(tmp_path)
     raw = result.raw_dir
