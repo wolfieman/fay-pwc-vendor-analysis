@@ -51,12 +51,12 @@ QUALIFIERS_HTML = """<fieldset>
         <tbody>
                     <tr>
                         <td>Sample Qualifier One</td>
-                        <td>900001</td>
+                        <td>Q.900001</td>
                         <td>Active</td>
                     </tr>
                     <tr>
                         <td>Sample Qualifier Two</td>
-                        <td>900002</td>
+                        <td>Q.900002</td>
                         <td>Active</td>
                     </tr>
         </tbody>
@@ -79,7 +79,7 @@ QUALIFIERS_QUIRK_HTML = """<fieldset>
         <tbody>
                     <tr>
                         <td>Sample Qualifier Three</td>
-                        <td>900003</td>
+                        <td>Q.900003</td>
                         <td>Active</td>
                     </tr>
                     <tr>
@@ -89,7 +89,7 @@ QUALIFIERS_QUIRK_HTML = """<fieldset>
                     </tr>
                     <tr>
                         <td>Sample Qualifier Four</td>
-                        <td>900004</td>
+                        <td>Q.900004</td>
                         <td>Inactive</td>
                     </tr>
         </tbody>
