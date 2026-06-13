@@ -157,7 +157,7 @@ A per-table column manifest is checked at read time with a hard failure on any m
 | D4 | Stale docs | Delete the superseded phase plan and triage audit (history retains them); annotate the database design doc as future-slice reference; README keeps the Part-1 case study with a rebuild-in-progress note |
 | D5 | Board | GitHub Issues as source of truth; values-free text rule; no in-repo board file |
 | D6 | NCLBGC parsing | Stdlib `html.parser`; no parsing dependency unless the markup demonstrably defeats it (recorded as a fresh decision if so) |
-| D7 | Release cadence | Milestone tags only (slice 1 complete, database shipped, refresh live), version synced at tag time |
+| D7 | Release cadence | One milestone tag per completed slice (`v0.3.0` = slice 1, `v0.4.0` = slice 2, …); at tag time the version is synced across `pyproject.toml`, `src/vendorscope/__init__.py`, and `CITATION.cff` with `uv lock` re-run |
 | D8 | Embedding table | Not created until the model (and so the vector dimension, fixed at creation) is chosen in the AI slice |
 | D9 | Type checking | Adopted as a dev dependency and local pre-merge check (in the 2.5 ritual), scoped to the package; not a CI step and not a gate criterion |
 | D10 | Sample publication | Its own card, gated on the owner's anonymization-scope decision and validated data (or an explicit owner-accepted caveat) |
