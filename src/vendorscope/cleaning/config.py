@@ -191,11 +191,11 @@ VENDOR_CONFIG = TableConfig(
 )
 
 # ---- NCLBGC license-details table (slice 2) ----
-# Roles follow the Master Data Documentation Part II per-column dictionary (the
-# authoritative spec for this table; Part III's cleaning sequence is an incomplete
+# Roles follow the NCLBGC section of the data dictionary (the authoritative
+# per-column spec for this table; the cleaning-protocol sequence is an incomplete
 # summary that omits the qualifier columns). The `sigil` role strips the uniform
 # L./Q. account-number sigil (decision N3). The qualifier columns are '; '-packed,
-# so Part II's rules apply per element (`multi`): Qualifier_Name hybrid-capped,
+# so the per-column rules apply per element (`multi`): Qualifier_Name hybrid-capped,
 # Qualifier_Status validated against its vocabulary. Splitting into rows is slice 4.
 LICENSE_STATUS = (
     "Active",
@@ -221,7 +221,7 @@ _LICENSE_COLUMNS: dict[str, ColumnRule] = {
     "License_Limitation": _vocab(LICENSE_LIMITATIONS),
     "Classifications": ColumnRule("list"),
     "Qualifier_Number": ColumnRule("sigil", multi=True),  # packed; sigil per element
-    "Qualifier_Name": ColumnRule("name", multi=True),  # Part II: hybrid capitalization
+    "Qualifier_Name": ColumnRule("name", multi=True),  # hybrid capitalization
     "Qualifier_Status": ColumnRule("vocab", allowed=QUALIFIER_STATUS, multi=True),
 }
 

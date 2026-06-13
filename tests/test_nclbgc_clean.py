@@ -67,7 +67,7 @@ def test_conservation_and_idempotency() -> None:
 
 @pytest.mark.unit
 def test_packed_qualifier_columns_clean_per_element() -> None:
-    # Part II: Qualifier_Name hybrid-capped, Qualifier_Status a controlled vocab;
+    # dictionary: Qualifier_Name hybrid-capped, Qualifier_Status a controlled vocab;
     # the columns are '; '-packed, so cleaning is applied per element.
     record = dict.fromkeys(config.LICENSE_EXPECTED_COLUMNS, "")
     record["License_Number"] = "L.5"

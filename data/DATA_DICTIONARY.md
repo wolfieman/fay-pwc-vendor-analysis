@@ -105,9 +105,9 @@ gitignored contacts sibling file, keyed by `row_key`.
 ## NCLBGC license-details table — NC Licensing Board for General Contractors (`portal.nclbgc.org`)
 
 Slice-2 gate artifact; `cleaning.config.LICENSE_CONFIG` is pinned to it by
-`tests/test_cleaning_config.py`. The authoritative schema is the **PWC Master Data
-Documentation, Part II** (`reports/_source/5`, "Licensing Data Dictionary"); the
-columns, types, and allowed vocabularies below are taken from it, not assumed.
+`tests/test_cleaning_config.py`. **This dictionary is the authoritative schema for the table**; its columns, types,
+and allowed vocabularies are profiled from the live NCLBGC source and the project's
+controlled vocabularies (`docs/master-data-documentation.md`), not assumed.
 
 ### Provenance
 
@@ -116,12 +116,14 @@ columns, types, and allowed vocabularies below are taken from it, not assumed.
   then the detail / qualifiers / public-matters HTML fragments per opaque result
   key) and the fragments are parsed with the standard-library HTML parser (D6).
   The lookups are driven by slice 1's general-contractor license numbers.
-- **Authoritative schema:** Master Data Documentation Part II — twelve columns,
-  Uniqueness Rule `License_Number`. Part III's cleaning sequence is a summary that
-  omits the qualifier columns; where the two differ, Part II governs.
-- **Vocabulary provenance tags:** `documented` = in Part II's allowed set;
+- **Authoritative schema:** this dictionary's twelve-column table below, Uniqueness
+  Rule `License_Number`. (`docs/data-cleaning-protocol.md`'s licensing cleaning
+  sequence is a summary that omits the qualifier columns; where the two differ, this
+  per-column dictionary governs.)
+- **Vocabulary provenance tags:** `documented` = in the project's controlled
+  vocabulary (`docs/master-data-documentation.md`);
   `study` = counted in the published 295-vendor study (`reports/findings-summary.md`);
-  `data` = a member added from the live data beyond Part II's list.
+  `data` = a member observed in the live source beyond the documented set.
 
 ### Conventions
 
@@ -140,7 +142,7 @@ or non-NC license) is left intact and surfaces as a violation, never coerced.
 - **Row identity (per run):** `row_key`, the record's zero-padded ordinal in the
   decoded raw extract; joins the deliverable/contacts file pair; keys all audit
   records.
-- **Dedup key:** `License_Number` (Part II Uniqueness Rule); one license carries
+- **Dedup key:** `License_Number` (the table's uniqueness rule); one license carries
   many qualifiers (a child-table relationship), so qualifier columns are packed,
   not a second dedup axis.
 - **Join key back to eVP (slice 1):** `License_Number` ↔ the eVP

@@ -33,7 +33,7 @@ erDiagram
     vendor ||--|| vendor_pii : "PII split"
     vendor ||--o{ vendor_trade : "holds"
     vendor ||--o{ vendor_certification : "carries"
-    vendor ||--o| vendor_embedding : "vector (P2.3)"
+    vendor ||--o| vendor_embedding : "vector (slice 5)"
 
     source {
         TEXT source_id PK
@@ -135,7 +135,7 @@ erDiagram
 | Vendor | `vendor_pii` | PII sibling of `vendor` (contact name/email/phone). |
 | Vendor | `vendor_trade` | One row per held trade; collapses the seven heterogeneous eVP per-trade blocks. |
 | Vendor | `vendor_certification` | HUB + NCSBE programs, one row per program. |
-| AI | `vendor_embedding` | `sqlite-vec` `vec0` virtual table; created now, populated at P2.3. |
+| AI | `vendor_embedding` | `sqlite-vec` `vec0` virtual table; created now, populated in slice 5. |
 | Parity | `v_license_flat` (view) | Re-collapses qualifier child rows to reproduce the flat source CSV 1:1. |
 
 ## Design decisions
@@ -151,7 +151,7 @@ erDiagram
   a structural guarantee rather than a filter that can be forgotten.
 - **Provenance spine.** `acquisition_run` records when/what/which-version produced each
   load, and every fact row carries `acquisition_run_id`, which makes the run-over-run
-  diff (P2.4) computable without a schema change.
+  diff (slice 6) computable without a schema change.
 - **Surrogate `vendor_id`.** Under STRICT every primary-key column is implicitly
   `NOT NULL`, so a natural composite PK `(vendor_name, license_number)` would reject a
   license-less vendor. A surrogate PK fixes that; the documented dedup identity is kept
@@ -165,7 +165,7 @@ erDiagram
   `ADD TABLE`), never altering a key here.
 - **`vendor_embedding` (vec0).** `vendor_id` is the primary key (1:1 back to a vendor);
   `run_id` is a partition key so embeddings are sliceable/droppable per run. The
-  dimension (768) is a placeholder finalized at P2.3 against the chosen model.
+  dimension (768) is a placeholder finalized in slice 5 against the chosen model.
 
 ## Standardization & loader contract (Phase 2.2b)
 

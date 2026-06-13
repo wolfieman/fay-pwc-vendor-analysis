@@ -1,7 +1,7 @@
 """NCLBGC fragment parser contracts (stdlib ``html.parser``, decision D6).
 
-Tested against the committed fixtures. The parser emits the Master Data
-Documentation Part II field names (the raw header space); the snake_case rename,
+Tested against the committed fixtures. The parser emits the NCLBGC dictionary's
+field names (the raw header space); the snake_case rename,
 sigil strip, and cleaning happen later, exactly as in slice 1.
 
 Copyright © 2026 Wolfgang Sanyer
@@ -33,7 +33,7 @@ def test_empty_search_yields_no_keys() -> None:
 
 
 @pytest.mark.contract
-def test_detail_parses_to_part_ii_fields() -> None:
+def test_detail_parses_to_license_fields() -> None:
     rec = nclbgc_parse.parse_detail(_read("detail.html"))
     assert rec["License_Number"] == "L.68764"  # sigil kept at parse; stripped at clean
     assert rec["Company_Name"] == "A & D Enterprises, Inc."

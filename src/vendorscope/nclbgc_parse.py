@@ -12,7 +12,7 @@ fragment shapes, each handled by a small ``HTMLParser`` subclass:
 - the qualifiers fragment is a table whose body rows can include a ``Status``
   header-bleed row that is scrubbed here.
 
-The parser emits the Master Data Documentation Part II field names (the raw
+The parser emits the NCLBGC dictionary's field names (the raw
 header space), values otherwise untouched: the ``L.``/``Q.`` sigils, the address
 ``<br />``, and the like are left for the cleaning stage. ``parse_detail`` raises
 ``NclbgcTemplateError`` when the fragment carries no fields (a markup change),
@@ -25,7 +25,7 @@ Licensed under the Polyform Noncommercial License 1.0.0 (see LICENSE).
 import re
 from html.parser import HTMLParser
 
-# The twelve-column license-details schema (Master Data Documentation Part II),
+# The twelve-column license-details schema (the NCLBGC data dictionary),
 # in order; the raw header space before the snake_case rename.
 FIELDS = (
     "License_Number",
