@@ -23,6 +23,28 @@ FILTER_STATUS_CODE = "1"  # Active
 FILTER_CLASSIFICATION_CODE = "790550003"  # Public Utilities
 RECORD_FLOOR = 500  # confirmed at the slice-1 owner checkpoint (documented pull ~570)
 
+# ---- NCLBGC acquisition (slice 2; tokenless portal, verified by the spike) ----
+NCLBGC_BASE = "https://portal.nclbgc.org"
+NCLBGC_SEARCH_URL = f"{NCLBGC_BASE}/Public/_Search/"
+NCLBGC_DETAIL_PATH = "/Public/_ShowAccountDetails/?key={key}&Source=Search"
+NCLBGC_QUALIFIERS_PATH = "/Public/_ShowAccountQualifiers/?key={key}"
+NCLBGC_MATTERS_PATH = "/Public/_ShowNCLBGCPublicMatters/?key={key}"
+# The search POST's named form fields (empty unless we are searching on them).
+NCLBGC_SEARCH_FIELDS = (
+    "ClassificationDefinitionIdnt",
+    "AccountNumber",
+    "QualifierAccountNumber",
+    "CompanyName",
+    "FirstName",
+    "LastName",
+    "PhoneNumber",
+    "streetAddress",
+    "PostalCode",
+    "City",
+    "StateCode",
+)
+NCLBGC_DELAY = 2.0  # politeness between requests (REQ-18)
+
 # ---- vocabularies (read from the source, never assumed; REQ-08) ----
 FLAG_MAP: dict[str, str] = {"true": "Yes", "false": "No"}
 FLAG_ALLOWED = ("Yes", "No")
@@ -47,6 +69,7 @@ class ColumnRule:
     role: str
     allowed: tuple[str, ...] = ()
     mapping: Mapping[str, str] | None = None
+    multi: bool = False  # apply the role per '; '-element (a packed multi-value cell)
 
 
 @dataclass(frozen=True, slots=True)
@@ -168,10 +191,12 @@ VENDOR_CONFIG = TableConfig(
 )
 
 # ---- NCLBGC license-details table (slice 2) ----
-# Roles follow the documented licensing cleaning sequence (data-cleaning-protocol)
-# over the Master Data Documentation Part II schema. The `sigil` role strips the
-# uniform L./Q. account-number sigil (decision N3). Qualifier columns are carried
-# (whitespace) and split into rows at slice 4, except the Q. sigil on the number.
+# Roles follow the Master Data Documentation Part II per-column dictionary (the
+# authoritative spec for this table; Part III's cleaning sequence is an incomplete
+# summary that omits the qualifier columns). The `sigil` role strips the uniform
+# L./Q. account-number sigil (decision N3). The qualifier columns are '; '-packed,
+# so Part II's rules apply per element (`multi`): Qualifier_Name hybrid-capped,
+# Qualifier_Status validated against its vocabulary. Splitting into rows is slice 4.
 LICENSE_STATUS = (
     "Active",
     "Expired",
@@ -183,6 +208,7 @@ LICENSE_STATUS = (
     "Archived",
 )
 LICENSE_LIMITATIONS = ("Unlimited", "Limited", "Intermediate")
+QUALIFIER_STATUS = ("Active", "Inactive", "Expired")
 
 _LICENSE_COLUMNS: dict[str, ColumnRule] = {
     "License_Number": ColumnRule("sigil"),
@@ -195,8 +221,8 @@ _LICENSE_COLUMNS: dict[str, ColumnRule] = {
     "License_Limitation": _vocab(LICENSE_LIMITATIONS),
     "Classifications": ColumnRule("list"),
     "Qualifier_Number": ColumnRule("sigil"),
-    "Qualifier_Name": ColumnRule("whitespace"),
-    "Qualifier_Status": ColumnRule("whitespace"),
+    "Qualifier_Name": ColumnRule("name", multi=True),  # Part II: hybrid capitalization
+    "Qualifier_Status": ColumnRule("vocab", allowed=QUALIFIER_STATUS, multi=True),
 }
 
 LICENSE_EXPECTED_COLUMNS: tuple[str, ...] = tuple(_LICENSE_COLUMNS)

@@ -66,6 +66,25 @@ def test_conservation_and_idempotency() -> None:
 
 
 @pytest.mark.unit
+def test_packed_qualifier_columns_clean_per_element() -> None:
+    # Part II: Qualifier_Name hybrid-capped, Qualifier_Status a controlled vocab;
+    # the columns are '; '-packed, so cleaning is applied per element.
+    record = dict.fromkeys(config.LICENSE_EXPECTED_COLUMNS, "")
+    record["License_Number"] = "L.5"
+    record["Qualifier_Name"] = "JOHN SMITH; jane doe"
+    record["Qualifier_Status"] = "Active; Bogus"
+    rows = engine.assign_row_keys([record])
+    result = engine.clean_table(rows, config.LICENSE_CONFIG)
+    row = result.rows[0]
+    assert row["Qualifier_Name"] == "John Smith; Jane Doe"  # hybrid-cap each element
+    assert row["Qualifier_Status"] == "Active; Bogus"  # report-don't-coerce: unchanged
+    assert any(
+        v.column == "Qualifier_Status" and v.rule == "out-of-vocabulary"
+        for v in result.violations
+    )
+
+
+@pytest.mark.unit
 def test_report_dont_coerce_on_out_of_vocabulary_status() -> None:
     record = dict.fromkeys(config.LICENSE_EXPECTED_COLUMNS, "")
     record["License_Number"] = "L.99999"

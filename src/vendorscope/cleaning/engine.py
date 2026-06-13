@@ -40,6 +40,20 @@ def assign_row_keys(
 
 
 def _apply_role(value: str, rule: ColumnRule) -> transforms.Result:
+    """Apply the column's role; per ``'; '`` element for a packed (multi) column."""
+    if not rule.multi:
+        return _apply_one(value, rule)
+    cleaned: list[str] = []
+    error: str | None = None
+    for part in value.split("; "):
+        out, err = _apply_one(part, rule)
+        cleaned.append(out)
+        if err is not None and error is None:
+            error = err
+    return "; ".join(cleaned), error
+
+
+def _apply_one(value: str, rule: ColumnRule) -> transforms.Result:
     role = rule.role
     if role == "whitespace":
         return value, None
