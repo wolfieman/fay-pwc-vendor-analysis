@@ -1,4 +1,4 @@
-"""NCLBGC CLI subcommands: acquire-nclbgc and clean-nclbgc (offline).
+"""NCLBGC CLI subcommands: acquire-nclbgc, profile-nclbgc, clean-nclbgc (offline).
 
 Copyright © 2026 Wolfgang Sanyer
 Licensed under the Polyform Noncommercial License 1.0.0 (see LICENSE).
@@ -94,3 +94,31 @@ def test_clean_nclbgc_writes_license_pair_without_red_columns(tmp_path: Path) ->
     assert master[0]["license_number"] == "68764"  # L. sigil stripped at clean
     contacts = tabular.read_csv(tmp_path / "nclbgc-license-contacts-20260612.csv")
     assert set(contacts[0]) == {"row_key", "phone", "qualifier_name"}
+
+
+@pytest.mark.contract
+def test_profile_nclbgc_writes_values_free_profile(tmp_path: Path) -> None:
+    run_id = "20260612T020202-nclbgc"
+    run_dir = tmp_path / "nclbgc" / run_id
+    run_dir.mkdir(parents=True)
+    record = nclbgc_parse.decode_record(_read("detail.html"), _read("qualifiers.html"))
+    (run_dir / "nclbgc-licenses.json").write_text(
+        json.dumps([record]), encoding="utf-8"
+    )
+
+    code = cli.run(
+        ["profile-nclbgc", "--run-id", run_id],
+        data_raw=tmp_path,
+        data_processed=tmp_path,
+    )
+    assert code == 0
+    report = json.loads(
+        (tmp_path / "profile" / "nclbgc-license-profile-20260612.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert report["record_count"] == 1
+    assert "Status" in report["vocabularies"]  # white vocab column profiled
+    # red columns report counts only, never values
+    assert set(report["red_columns"]) == {"Phone", "Qualifier_Name"}
+    assert set(report["red_columns"]["Phone"]) == {"nonblank", "blank"}

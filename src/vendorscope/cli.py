@@ -32,6 +32,11 @@ _VOCAB_COLUMNS = tuple(
     for col, rule in config.VENDOR_CONFIG.columns.items()
     if rule.role in ("vocab", "flag")
 )
+_LICENSE_VOCAB_COLUMNS = tuple(
+    col
+    for col, rule in config.LICENSE_CONFIG.columns.items()
+    if rule.role in ("vocab", "flag")
+)
 _RED_SNAKE = tuple(config.SNAKE_CASE[c] for c in config.RED_COLUMNS)
 _LICENSE_RED_SNAKE = tuple(
     config.LICENSE_SNAKE_CASE[c] for c in config.LICENSE_RED_COLUMNS
@@ -210,6 +215,23 @@ def _load_nclbgc_run(data_raw: Path, run_id: str) -> list[dict[str, str]]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _profile_nclbgc(
+    args: argparse.Namespace, *, data_raw: Path, data_processed: Path
+) -> int:
+    records = _load_nclbgc_run(data_raw, args.run_id)
+    report = profiling.profile(
+        records,
+        vocab_columns=_LICENSE_VOCAB_COLUMNS,
+        red_columns=config.LICENSE_RED_COLUMNS,
+    )
+    out_dir = data_processed / "profile"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out = out_dir / f"nclbgc-license-profile-{args.run_id[:8]}.json"
+    out.write_text(json.dumps(report, indent=1, ensure_ascii=False), encoding="utf-8")
+    print(f"profiled {report['record_count']} licenses -> {out}")
+    return 0
+
+
 def _clean_nclbgc(
     args: argparse.Namespace, *, data_raw: Path, data_processed: Path
 ) -> int:
@@ -250,6 +272,10 @@ def run(
         "acquire-nclbgc", help="resolve and enrich slice-1 licenses against NCLBGC"
     )
     acqn.add_argument("--limit", type=int, default=0, help="cap the vendor count")
+    profn = sub.add_parser(
+        "profile-nclbgc", help="profile a frozen NCLBGC run (values-free)"
+    )
+    profn.add_argument("--run-id", required=True)
     clnn = sub.add_parser(
         "clean-nclbgc", help="clean a frozen NCLBGC run into the license pair"
     )
@@ -266,6 +292,8 @@ def run(
         return _acquire_nclbgc(
             args, transport=transport, data_raw=data_raw, data_processed=data_processed
         )
+    if args.command == "profile-nclbgc":
+        return _profile_nclbgc(args, data_raw=data_raw, data_processed=data_processed)
     return _clean_nclbgc(args, data_raw=data_raw, data_processed=data_processed)
 
 

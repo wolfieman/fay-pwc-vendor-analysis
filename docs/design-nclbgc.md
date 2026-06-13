@@ -31,7 +31,7 @@ Everything else is slice 1's pipeline, unchanged.
 | `nclbgc_parse.py` | pure stdlib `html.parser`: search fragment → opaque key (the `onclick` token); detail fragment → one license record (mapping the fragment's label/field pairs onto the Part II field names); qualifiers fragment → the qualifier rows, scrubbing the `Status` header-bleed row; raises a specific error on a template miss | pure | **replaces `evp_parse`** — HTML fragments, not a `var data` regex |
 | `cleaning/config.py` (extend) | add `LICENSE_CONFIG` + its `EXPECTED_COLUMNS` (the twelve-column schema in section 4.2): roles, the status vocabulary including `Invalid`/`Archived`, limitation Unlimited/Limited/Intermediate, dedup on `License_Number` | pure | a second `TableConfig`, same shape as `VENDOR_CONFIG` |
 | `cleaning/transforms.py` (extend) | add one normalizer: strip the uniform `L.`/`Q.` type-sigil to bare digits, logged as a correction (N3) | pure | one new pure function |
-| `cli.py` (extend) | add `acquire-nclbgc` (driven by the slice-1 license numbers) and `clean-nclbgc` subcommands | shell | two subcommands |
+| `cli.py` (extend) | add `acquire-nclbgc` (driven by the slice-1 license numbers), `profile-nclbgc` (values-free, mirrors eVP `profile`), and `clean-nclbgc` subcommands | shell | three subcommands |
 
 The fixture sanitizer (`tools/make_nclbgc_fixture.py`) and the six fixtures already exist. There is **no** drift runbook (no drift).
 
