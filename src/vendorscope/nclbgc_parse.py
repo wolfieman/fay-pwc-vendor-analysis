@@ -74,7 +74,13 @@ class _KeyCollector(HTMLParser):
 
 
 class _DetailCollector(HTMLParser):
-    """Collects ``(legend, kind, pieces)`` for each label/field div in order."""
+    """Collects ``(legend, kind, pieces)`` for each label/field div in order.
+
+    A field's value is its *direct* text only: text inside a nested element (a
+    styled annotation ``<span>``, observed on Invalid/Archived statuses) is
+    suppressed via a depth counter, which also stops a nested ``<div>`` from
+    prematurely closing the entry. ``<br />`` at the top level still splits pieces.
+    """
 
     def __init__(self) -> None:
         super().__init__()
@@ -85,26 +91,34 @@ class _DetailCollector(HTMLParser):
         self._kind: str | None = None
         self._pieces: list[str] = []
         self._buf = ""
+        self._depth = 0  # nesting depth inside the current field (>0 = suppress text)
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         if tag == "legend":
             self._in_legend = True
             self._legend_buf = ""
-        elif tag == "div":
+        elif tag == "div" and self._kind is None:
             css = dict(attrs).get("class", "")
             if css == "display-label":
-                self._kind, self._pieces, self._buf = "label", [], ""
+                self._kind, self._pieces, self._buf, self._depth = "label", [], "", 0
             elif css == "display-field":
-                self._kind, self._pieces, self._buf = "field", [], ""
-        elif tag == "br" and self._kind:
-            self._pieces.append(self._buf.strip())
-            self._buf = ""
+                self._kind, self._pieces, self._buf, self._depth = "field", [], "", 0
+        elif self._kind is not None:
+            if tag == "br" and self._depth == 0:
+                self._pieces.append(self._buf.strip())
+                self._buf = ""
+            else:
+                self._depth += 1  # a nested element: suppress its text
 
     def handle_endtag(self, tag: str) -> None:
         if tag == "legend":
             self._in_legend = False
             self._legend = self._legend_buf.strip()
-        elif tag == "div" and self._kind:
+        elif self._kind is None:
+            return
+        elif self._depth > 0:
+            self._depth -= 1  # closing a nested element (span, nested div)
+        elif tag == "div":
             self._pieces.append(self._buf.strip())
             self.entries.append(
                 (self._legend, self._kind, [p for p in self._pieces if p])
@@ -114,7 +128,7 @@ class _DetailCollector(HTMLParser):
     def handle_data(self, data: str) -> None:
         if self._in_legend:
             self._legend_buf += data
-        elif self._kind:
+        elif self._kind is not None and self._depth == 0:
             self._buf += data
 
 
@@ -134,13 +148,13 @@ class _TableCollector(HTMLParser):
             self._section = tag
         elif tag == "tr":
             self._cells = []
-        elif tag == "td":
+        elif tag in ("td", "th"):  # real headers use <th>; data rows use <td>
             self._in_td, self._buf = True, ""
 
     def handle_endtag(self, tag: str) -> None:
         if tag in ("thead", "tbody"):
             self._section = ""
-        elif tag == "td" and self._cells is not None:
+        elif tag in ("td", "th") and self._cells is not None:
             self._cells.append(self._buf.strip())
             self._in_td = False
         elif tag == "tr" and self._cells is not None:

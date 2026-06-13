@@ -77,3 +77,44 @@ def test_decode_record_combines_detail_with_packed_qualifiers() -> None:
 def test_template_miss_raises() -> None:
     with pytest.raises(nclbgc_parse.NclbgcTemplateError):
         nclbgc_parse.parse_detail(_read("matters-empty.html"))  # no display fields
+
+
+# An Invalid/Archived license shows the status word plus a styled annotation span
+# (observed live: '<span style="color:red"> - License Not Valid</span>'); the
+# field value is the status token, not the annotation.
+_STATUS_WITH_ANNOTATION = """
+<fieldset><legend>License Information</legend>
+  <div class="display-label">License #</div><div class="display-field">L.99999</div>
+  <div class="display-label">Status</div>
+  <div class="display-field">
+      Invalid
+      <span style="color:red">&nbsp; - &nbsp; License Not Valid</span>
+  </div>
+</fieldset>
+"""
+
+
+@pytest.mark.contract
+def test_status_ignores_nested_annotation_span() -> None:
+    rec = nclbgc_parse.parse_detail(_STATUS_WITH_ANNOTATION)
+    # only the field's direct text is the value; the styled span is dropped
+    assert rec["Status"] == "Invalid"
+
+
+# Real qualifier tables render the header row with <th>; a bled header copy can
+# still appear in the body and must be scrubbed even when headers are <th>.
+_QUALIFIERS_TH_HEADER = """
+<table>
+  <thead><tr><th>Name</th><th>Qualifier #</th><th>Status</th></tr></thead>
+  <tbody>
+    <tr><td>Name</td><td>Qualifier #</td><td>Status</td></tr>
+    <tr><td>Sample Qualifier</td><td>Q.5</td><td>Active</td></tr>
+  </tbody>
+</table>
+"""
+
+
+@pytest.mark.contract
+def test_qualifiers_scrub_bleed_with_th_headers() -> None:
+    rows = nclbgc_parse.parse_qualifiers(_QUALIFIERS_TH_HEADER)
+    assert [r["Qualifier_Number"] for r in rows] == ["Q.5"]  # bled header dropped
