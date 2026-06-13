@@ -65,7 +65,11 @@ shared, publicly mutable saved-search filter to drift, so there is nothing for a
 drift detector to guard. Integrity is instead the parser's template-miss error
 (R3), the resolve-or-flag outcome (R4), and the fact that a by-number hit is
 itself the confirmation that the number matched — recorded so a future reader does
-not mistake the missing detector for an omission.
+not mistake the missing detector for an omission. **Superseded (slice 3,
+2026-06-13):** "a by-number hit is itself the confirmation" proved false — ~11% of
+by-number hits resolved to the wrong company. Slice 3 adds a **name-correspondence**
+check to confirm a number hit (`requirements-validation.md` V4); the by-number-is-
+confirmation assumption is retired.
 
 ## Keeping this current
 
