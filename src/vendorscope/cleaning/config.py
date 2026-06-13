@@ -166,3 +166,61 @@ VENDOR_CONFIG = TableConfig(
     dedup_key=("Name", "GeneralContractorLicenseNumber"),
     red_columns=RED_COLUMNS,
 )
+
+# ---- NCLBGC license-details table (slice 2) ----
+# Roles follow the documented licensing cleaning sequence (data-cleaning-protocol)
+# over the Master Data Documentation Part II schema. The `sigil` role strips the
+# uniform L./Q. account-number sigil (decision N3). Qualifier columns are carried
+# (whitespace) and split into rows at slice 4, except the Q. sigil on the number.
+LICENSE_STATUS = (
+    "Active",
+    "Expired",
+    "Suspended",
+    "Revoked",
+    "Inactive",
+    "Pending",
+    "Invalid",
+    "Archived",
+)
+LICENSE_LIMITATIONS = ("Unlimited", "Limited", "Intermediate")
+
+_LICENSE_COLUMNS: dict[str, ColumnRule] = {
+    "License_Number": ColumnRule("sigil"),
+    "Company_Name": ColumnRule("name"),
+    "Address": ColumnRule("whitespace"),
+    "Phone": ColumnRule("phone"),
+    "Issue_Date": ColumnRule("date"),
+    "Expiration_Date": ColumnRule("date"),
+    "Status": _vocab(LICENSE_STATUS),
+    "License_Limitation": _vocab(LICENSE_LIMITATIONS),
+    "Classifications": ColumnRule("list"),
+    "Qualifier_Number": ColumnRule("sigil"),
+    "Qualifier_Name": ColumnRule("whitespace"),
+    "Qualifier_Status": ColumnRule("whitespace"),
+}
+
+LICENSE_EXPECTED_COLUMNS: tuple[str, ...] = tuple(_LICENSE_COLUMNS)
+
+LICENSE_SNAKE_CASE: dict[str, str] = {
+    "License_Number": "license_number",
+    "Company_Name": "company_name",
+    "Address": "address",
+    "Phone": "phone",
+    "Issue_Date": "issue_date",
+    "Expiration_Date": "expiration_date",
+    "Status": "status",
+    "License_Limitation": "license_limitation",
+    "Classifications": "classifications",
+    "Qualifier_Number": "qualifier_number",
+    "Qualifier_Name": "qualifier_name",
+    "Qualifier_Status": "qualifier_status",
+}
+
+LICENSE_RED_COLUMNS = ("Phone", "Qualifier_Name")
+
+LICENSE_CONFIG = TableConfig(
+    name="nclbgc-license-details",
+    columns=_LICENSE_COLUMNS,
+    dedup_key=("License_Number",),
+    red_columns=LICENSE_RED_COLUMNS,
+)

@@ -55,6 +55,8 @@ def _apply_role(value: str, rule: ColumnRule) -> transforms.Result:
         return transforms.normalize_license(value)
     if role == "list":
         return transforms.normalize_list(value)
+    if role == "sigil":
+        return transforms.strip_sigils(value)
     if role in ("vocab", "flag"):
         return transforms.map_vocabulary(
             value, allowed=rule.allowed, mapping=rule.mapping
