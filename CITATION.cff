@@ -15,7 +15,6 @@ type: software
 authors:
   - family-names: Sanyer
     given-names: Wolfgang
-    affiliation: "Fayetteville State University, Broadwell College of Business and Economics"
 version: "0.4.0"
 date-released: "2026-06-13"
 license: Polyform-Noncommercial-1.0.0
