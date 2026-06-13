@@ -106,20 +106,20 @@ def normalize_list(value: str) -> Result:
 
 
 def strip_sigils(value: str) -> Result:
-    """Strip NCLBGC's uniform ``L.``/``Q.`` type-sigil from each element.
+    """Strip NCLBGC's uniform ``L.``/``Q.`` account-number type-sigil.
 
-    Packed-aware: splits on ``'; '`` so one normalizer serves both the single
-    ``License_Number`` and the ``'; '``-packed ``Qualifier_Number``. A meaningful
-    multi-letter prefix (``WV``, ``NC``) is not a sigil and is left intact
-    (REQ-09 scope: the strip is normalization of a content-free sigil, not the
+    Operates on one value; the engine applies it per ``'; '`` element on the
+    packed ``Qualifier_Number`` (``multi=True``) and once on the single
+    ``License_Number`` — the same packing mechanism as every other multi column.
+    A meaningful multi-letter prefix (``WV``, ``NC``) is not a sigil and is left
+    intact (REQ-09 scope: the strip normalizes a content-free sigil, not the
     silent prefix-stripping REQ-09 forbids). The change is the engine's audited
     correction.
     """
     if value.strip() == "":
         return "", None
-    parts = value.split("; ")
-    out = [(m.group(1) if (m := _SIGIL.match(part)) else part) for part in parts]
-    return "; ".join(out), None
+    match = _SIGIL.match(value)
+    return (match.group(1) if match else value), None
 
 
 def map_vocabulary(

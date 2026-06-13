@@ -220,7 +220,7 @@ _LICENSE_COLUMNS: dict[str, ColumnRule] = {
     "Status": _vocab(LICENSE_STATUS),
     "License_Limitation": _vocab(LICENSE_LIMITATIONS),
     "Classifications": ColumnRule("list"),
-    "Qualifier_Number": ColumnRule("sigil"),
+    "Qualifier_Number": ColumnRule("sigil", multi=True),  # packed; sigil per element
     "Qualifier_Name": ColumnRule("name", multi=True),  # Part II: hybrid capitalization
     "Qualifier_Status": ColumnRule("vocab", allowed=QUALIFIER_STATUS, multi=True),
 }

@@ -80,11 +80,12 @@ def test_list_standardizes_to_semicolon_space() -> None:
 
 
 @pytest.mark.unit
-def test_strip_sigils_handles_single_and_packed_account_numbers() -> None:
-    # NCLBGC's uniform type-sigil (L. license, Q. qualifier) stripped to bare digits
+def test_strip_sigils_normalizes_a_single_account_number() -> None:
+    # NCLBGC's uniform type-sigil (L. license, Q. qualifier) stripped to bare digits.
+    # Operates on one value; the engine applies it per '; ' element on the packed
+    # Qualifier_Number (multi=True), so this transform takes a single element.
     assert t.strip_sigils("L.68764") == ("68764", None)
-    # a '; '-packed qualifier-number cell: the sigil comes off each element
-    assert t.strip_sigils("Q.900001; Q.900002") == ("900001; 900002", None)
+    assert t.strip_sigils("Q.900001") == ("900001", None)
     # already bare, and blank, pass unchanged
     assert t.strip_sigils("68764") == ("68764", None)
     assert t.strip_sigils("") == ("", None)

@@ -38,15 +38,15 @@ _LICENSE_RED_SNAKE = tuple(
 )
 
 
-def _run_id() -> str:
-    return time.strftime("%Y%m%dT%H%M%S") + "-evp"
+def _run_id(source: str) -> str:
+    return time.strftime("%Y%m%dT%H%M%S") + f"-{source}"
 
 
 def _acquire_evp(args: argparse.Namespace, *, transport, data_raw: Path) -> int:
     client = http_client.build_client(transport=transport)
     try:
         result = evp_client.acquire(
-            client=client, data_raw=data_raw, run_id=_run_id(), floor=args.floor
+            client=client, data_raw=data_raw, run_id=_run_id("evp"), floor=args.floor
         )
     except evp_client.DriftHalt as halt:
         print(f"HALT: {halt}", file=sys.stderr)
@@ -80,38 +80,60 @@ def _profile(args: argparse.Namespace, *, data_raw: Path, data_processed: Path) 
     return 0
 
 
-def _clean(args: argparse.Namespace, *, data_raw: Path, data_processed: Path) -> int:
-    records = _load_run(data_raw, args.run_id)
-    tabular.assert_manifest(records[0].keys())
+def _counts(pairs) -> dict[str, int]:
+    return {f"{col}:{rule}": n for (col, rule), n in Counter(pairs).most_common()}
+
+
+def _clean_table(
+    records: list[dict[str, str]],
+    *,
+    run_id: str,
+    data_processed: Path,
+    table_config: config.TableConfig,
+    snake_case: dict[str, str],
+    red_snake: tuple[str, ...],
+    expected_columns: tuple[str, ...],
+    master_name: str,
+    contacts_name: str,
+    noun: str,
+) -> int:
+    """The clean pipeline shared by every source: manifest check, clean, conserve,
+    snake_case rename, PII split, deliverable pair, and a values-free run report.
+
+    ``master_name``/``contacts_name`` carry a ``{date}`` placeholder; ``noun`` is the
+    record word printed (rows, licenses). Source-specific decoding happens upstream.
+    """
+    if records:
+        tabular.assert_manifest(records[0].keys(), expected=expected_columns)
     rows = engine.assign_row_keys(records)
-    result = engine.clean_table(rows, config.VENDOR_CONFIG)
+    result = engine.clean_table(rows, table_config)
     if len(rows) != len(result.rows) + len(result.drops):
         print("HALT: row conservation identity violated", file=sys.stderr)
         return 4
 
-    renamed = tabular.rename_snake(result.rows)
-    deliverable, contacts = tabular.split_pii(renamed, _RED_SNAKE)
-    date = args.run_id[:8]
+    renamed = tabular.rename_snake(result.rows, snake_case)
+    deliverable, contacts = tabular.split_pii(renamed, red_snake)
+    date = run_id[:8]
     deliverable_cols = [
         "row_key",
-        *(c for c in config.SNAKE_CASE.values() if c not in _RED_SNAKE),
+        *(c for c in snake_case.values() if c not in red_snake),
     ]
     data_processed.mkdir(parents=True, exist_ok=True)
     tabular.write_csv(
-        data_processed / f"evp-vendor-master-vendor-{date}.csv",
+        data_processed / master_name.format(date=date),
         deliverable,
         columns=deliverable_cols,
     )
     tabular.write_csv(
-        data_processed / f"evp-vendor-contacts-vendor-{date}.csv",
+        data_processed / contacts_name.format(date=date),
         contacts,
-        columns=["row_key", *_RED_SNAKE],
+        columns=["row_key", *red_snake],
     )
 
-    audit_dir = data_processed / "audit" / args.run_id
+    audit_dir = data_processed / "audit" / run_id
     audit_dir.mkdir(parents=True, exist_ok=True)
     report = {
-        "run_id": args.run_id,
+        "run_id": run_id,
         "rows_in": len(rows),
         "rows_out": len(result.rows),
         "dedup_drops": len(result.drops),
@@ -124,19 +146,26 @@ def _clean(args: argparse.Namespace, *, data_raw: Path, data_processed: Path) ->
         json.dumps(report, indent=1), encoding="utf-8"
     )
     print(
-        f"cleaned {report['rows_in']} -> {report['rows_out']} rows "
+        f"cleaned {report['rows_in']} -> {report['rows_out']} {noun} "
         f"({report['corrections']} corrections, {report['violations']} violations, "
         f"{report['dedup_drops']} drops)"
     )
     return 0
 
 
-def _counts(pairs) -> dict[str, int]:
-    return {f"{col}:{rule}": n for (col, rule), n in Counter(pairs).most_common()}
-
-
-def _nclbgc_run_id() -> str:
-    return time.strftime("%Y%m%dT%H%M%S") + "-nclbgc"
+def _clean(args: argparse.Namespace, *, data_raw: Path, data_processed: Path) -> int:
+    return _clean_table(
+        _load_run(data_raw, args.run_id),
+        run_id=args.run_id,
+        data_processed=data_processed,
+        table_config=config.VENDOR_CONFIG,
+        snake_case=config.SNAKE_CASE,
+        red_snake=_RED_SNAKE,
+        expected_columns=config.EXPECTED_COLUMNS,
+        master_name="evp-vendor-master-vendor-{date}.csv",
+        contacts_name="evp-vendor-contacts-vendor-{date}.csv",
+        noun="rows",
+    )
 
 
 def _slice1_vendors(data_processed: Path) -> list[dict[str, str]]:
@@ -164,7 +193,7 @@ def _acquire_nclbgc(
     client = http_client.build_client(transport=transport)
     try:
         result = nclbgc_client.acquire(
-            client=client, data_raw=data_raw, run_id=_nclbgc_run_id(), vendors=vendors
+            client=client, data_raw=data_raw, run_id=_run_id("nclbgc"), vendors=vendors
         )
     finally:
         client.close()
@@ -184,56 +213,18 @@ def _load_nclbgc_run(data_raw: Path, run_id: str) -> list[dict[str, str]]:
 def _clean_nclbgc(
     args: argparse.Namespace, *, data_raw: Path, data_processed: Path
 ) -> int:
-    records = _load_nclbgc_run(data_raw, args.run_id)
-    if records:
-        tabular.assert_manifest(
-            records[0].keys(), expected=config.LICENSE_EXPECTED_COLUMNS
-        )
-    rows = engine.assign_row_keys(records)
-    result = engine.clean_table(rows, config.LICENSE_CONFIG)
-    if len(rows) != len(result.rows) + len(result.drops):
-        print("HALT: row conservation identity violated", file=sys.stderr)
-        return 4
-
-    renamed = tabular.rename_snake(result.rows, config.LICENSE_SNAKE_CASE)
-    deliverable, contacts = tabular.split_pii(renamed, _LICENSE_RED_SNAKE)
-    date = args.run_id[:8]
-    deliverable_cols = [
-        "row_key",
-        *(c for c in config.LICENSE_SNAKE_CASE.values() if c not in _LICENSE_RED_SNAKE),
-    ]
-    data_processed.mkdir(parents=True, exist_ok=True)
-    tabular.write_csv(
-        data_processed / f"nclbgc-license-master-{date}.csv",
-        deliverable,
-        columns=deliverable_cols,
+    return _clean_table(
+        _load_nclbgc_run(data_raw, args.run_id),
+        run_id=args.run_id,
+        data_processed=data_processed,
+        table_config=config.LICENSE_CONFIG,
+        snake_case=config.LICENSE_SNAKE_CASE,
+        red_snake=_LICENSE_RED_SNAKE,
+        expected_columns=config.LICENSE_EXPECTED_COLUMNS,
+        master_name="nclbgc-license-master-{date}.csv",
+        contacts_name="nclbgc-license-contacts-{date}.csv",
+        noun="licenses",
     )
-    tabular.write_csv(
-        data_processed / f"nclbgc-license-contacts-{date}.csv",
-        contacts,
-        columns=["row_key", *_LICENSE_RED_SNAKE],
-    )
-
-    audit_dir = data_processed / "audit" / args.run_id
-    audit_dir.mkdir(parents=True, exist_ok=True)
-    report = {
-        "run_id": args.run_id,
-        "rows_in": len(rows),
-        "rows_out": len(result.rows),
-        "dedup_drops": len(result.drops),
-        "corrections": len(result.corrections),
-        "violations": len(result.violations),
-        "corrections_by_rule": _counts((c.column, c.rule) for c in result.corrections),
-        "violations_by_rule": _counts((v.column, v.rule) for v in result.violations),
-    }
-    (audit_dir / "run-report.json").write_text(
-        json.dumps(report, indent=1), encoding="utf-8"
-    )
-    print(
-        f"cleaned {report['rows_in']} -> {report['rows_out']} licenses "
-        f"({report['corrections']} corrections, {report['violations']} violations)"
-    )
-    return 0
 
 
 def run(
