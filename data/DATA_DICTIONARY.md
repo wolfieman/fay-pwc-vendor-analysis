@@ -1,12 +1,19 @@
 # Data Dictionary
 
-> **DRAFT pending the slice-1 owner checkpoint** (plan section 8.2, phase 3).
-> Finalized as a slice-1 gate artifact; a unit test asserts this document agrees
-> with the executable column manifest and vocabulary config.
+This dictionary is the one tracked, PII-free data artifact. It covers two source
+tables, each a level-2 section below: the **eVP vendor table** (slice 1) and the
+**NCLBGC license-details table** (slice 2). A unit test asserts each section
+agrees with its executable column manifest and vocabulary config; the test scopes
+its row parser by section heading, so the two tables are pinned independently.
 
 **Last updated:** 2026-06-12
 
-## Provenance
+## eVP vendor table — NC electronic Vendor Portal (`evp.nc.gov`)
+
+Finalized as a slice-1 gate artifact; `cleaning.config.VENDOR_CONFIG` is pinned to
+it by `tests/test_cleaning_config.py`.
+
+### Provenance
 
 - **Source:** NC electronic Vendor Portal (eVP, `evp.nc.gov`), the saved-search
   results page (record id `20199579-3165-f111-a824-001dd812e0a9`, page 1), whose
@@ -22,7 +29,7 @@
   `prior-vintage` = observed in the previous verified pull but absent now;
   `portal` = documented portal knowledge not observable under the locked filter.
 
-## Conventions
+### Conventions
 
 Identifiers and ZIP codes are text (leading zeros preserved); dates are
 `MM/DD/YYYY` text; phones `###-###-####`; emails lowercased; blank means
@@ -31,7 +38,7 @@ land as canonical `Yes`/`No`. Raw artifacts keep the source's field names; the
 processed deliverable uses the snake_case targets below (the rename contract is
 this table, applied once at processed-write with a uniqueness assertion).
 
-## Keys
+### Keys
 
 - **Row identity (per run):** `row_key`, the record's zero-padded ordinal in the
   decoded raw extract; joins the deliverable/contacts file pair; keys all audit
@@ -40,7 +47,7 @@ this table, applied once at processed-write with a uniqueness assertion).
   (one exact duplicate pair observed in the profiled pull).
 - **NCLBGC join key (slice 2):** `GeneralContractorLicenseNumber`.
 
-## Columns (41)
+### Columns (41)
 
 Sensitivity: red = identifies an individual (never tracked, split to the contacts
 sibling); yellow = business identifier; white = non-sensitive.
@@ -89,8 +96,80 @@ sibling); yellow = business identifier; white = non-sensitive.
 | 40 | ArchitecturalServices | architectural_services | flag | white | observed: False (479), True (91) |
 | 41 | EngineeringServices | engineering_services | flag | white | observed: False (453), True (117) |
 
-## Red set (this source)
+### Red set
 
 `MainContactName`, `MainContactEmail`, `MainContactPhone`. Values never appear in
 any tracked artifact, fixture, or board text; the columns live only in the
 gitignored contacts sibling file, keyed by `row_key`.
+
+## NCLBGC license-details table — NC Licensing Board for General Contractors (`portal.nclbgc.org`)
+
+Slice-2 gate artifact; `cleaning.config.LICENSE_CONFIG` is pinned to it by
+`tests/test_cleaning_config.py`. The authoritative schema is the **PWC Master Data
+Documentation, Part II** (`reports/_source/5`, "Licensing Data Dictionary"); the
+columns, types, and allowed vocabularies below are taken from it, not assumed.
+
+### Provenance
+
+- **Source:** the NCLBGC public license portal (`portal.nclbgc.org`). There is no
+  bulk page; each license is looked up individually (one search POST per vendor,
+  then the detail / qualifiers / public-matters HTML fragments per opaque result
+  key) and the fragments are parsed with the standard-library HTML parser (D6).
+  The lookups are driven by slice 1's general-contractor license numbers.
+- **Authoritative schema:** Master Data Documentation Part II — twelve columns,
+  Uniqueness Rule `License_Number`. Part III's cleaning sequence is a summary that
+  omits the qualifier columns; where the two differ, Part II governs.
+- **Vocabulary provenance tags:** `documented` = in Part II's allowed set;
+  `study` = counted in the published 295-vendor study (`reports/findings-summary.md`);
+  `data` = a member added from the live data beyond Part II's list.
+
+### Conventions
+
+Same posture as the eVP table. Identifiers are text (no numeric coercion); dates
+are `MM/DD/YYYY` text; phones `###-###-####`; blank is never imputed; multi-value
+cells are `'; '`-packed (splitting into rows is slice 4). Raw fragments keep the
+source's field names; the processed deliverable uses the snake_case targets below
+(the rename contract, applied once at processed-write with a uniqueness assertion).
+NCLBGC prints the account number with a uniform type sigil (`L.` on a license,
+`Q.` on a qualifier); the sigil is stripped to bare digits at processed-write and
+logged as a correction (decision N3), while a *meaningful* prefix (an out-of-state
+or non-NC license) is left intact and surfaces as a violation, never coerced.
+
+### Keys
+
+- **Row identity (per run):** `row_key`, the record's zero-padded ordinal in the
+  decoded raw extract; joins the deliverable/contacts file pair; keys all audit
+  records.
+- **Dedup key:** `License_Number` (Part II Uniqueness Rule); one license carries
+  many qualifiers (a child-table relationship), so qualifier columns are packed,
+  not a second dedup axis.
+- **Join key back to eVP (slice 1):** `License_Number` ↔ the eVP
+  `general_contractor_license_number`.
+
+### Columns (12)
+
+Sensitivity: red = identifies an individual (never tracked, split to the contacts
+sibling); yellow = business identifier; white = non-sensitive. `multi` marks a
+`'; '`-packed cell whose cleaning rule is applied per element.
+
+| # | Source field | snake_case target | Type | Sensitivity | Notes / observed vocabulary |
+|---|---|---|---|---|---|
+| 1 | License_Number | license_number | text id | yellow | dedup key; join key to eVP `general_contractor_license_number`; uniform `L.` sigil stripped to digits (N3); a meaningful prefix survives as a violation |
+| 2 | Company_Name | company_name | text | yellow | hybrid business-name casing + standardized legal suffixes |
+| 3 | Address | address | text | yellow | proper case; not restructured |
+| 4 | Phone | phone | text | red | `###-###-####`; contacts file only |
+| 5 | Issue_Date | issue_date | date | white | MM/DD/YYYY text |
+| 6 | Expiration_Date | expiration_date | date | white | MM/DD/YYYY text |
+| 7 | Status | status | category | white | documented: Active / Expired / Suspended / Revoked / Inactive / Pending; data adds Invalid and Archived (study: 263 Active, 23 Invalid, 9 Archived) |
+| 8 | License_Limitation | license_limitation | category | white | documented: Unlimited / Limited / Intermediate (study: 206 / 82 / 7) |
+| 9 | Classifications | classifications | text multi | white | `'; '`-packed; splitting into rows is slice 4 |
+| 10 | Qualifier_Number | qualifier_number | text multi | yellow | `'; '`-packed; uniform `Q.` sigil stripped (N3) |
+| 11 | Qualifier_Name | qualifier_name | text multi | red | `'; '`-packed; hybrid casing; contacts file only |
+| 12 | Qualifier_Status | qualifier_status | category multi | white | documented: Active / Inactive / Expired; `'; '`-packed |
+
+### Red set
+
+`Phone`, `Qualifier_Name`. Values never appear in any tracked artifact, fixture,
+or board text; the columns live only in the gitignored contacts sibling file,
+keyed by `row_key`. The packed `qualifier_name` cell therefore lives only in the
+contacts file.
